@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能客服系统</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <style>
+        :root {
+            --bg:       #ffffff;
+            --sb-bg:    #f8f9fa;
+            --surface:  #ffffff;
+            --surface2: #f1f3f5;
+            --surface3: #e9ecef;
+            --border:   #dee2e6;
+            --border2:  #ced4da;
+            --text:     #212529;
+            --text2:    #495057;
+            --text3:    #868e96;
+            --accent:   #6366f1;
+            --accent2:  #4f52de;
+            --primary:  #f97316;
+            --primary2: #ea6a0a;
+            --success:  #22c55e;
+            --danger:   #ef4444;
+            --warning:  #f59e0b;
+            --r:        10px;
+            --rs:       6px;
+            --sb-w:     256px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, "Inter", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            font-size: 13px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ── App shell ── */
+        .app { display: flex; height: 100vh; }
+
+        /* ══════════════════════════════
+           Sidebar
+        ══════════════════════════════ */
+        .sidebar {
+            width: var(--sb-w);
+            background: var(--sb-bg);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        /* Logo */
+        .sb-logo {
+            padding: 14px 14px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .logo-box {
+            width: 34px; height: 34px;
+            background: linear-gradient(135deg, var(--primary) 0%, #f43f5e 100%);
+            border-radius: 9px;
+            display: grid; place-items: center;
+            color: #fff; font-size: 11px; font-weight: 800;
+            letter-spacing: -.5px; flex-shrink: 0;
+            box-shadow: 0 4px 14px rgba(249,115,22,.35);
+        }
+        .logo-name { font-size: 13px; font-weight: 700; color: var(--text); }
+        .logo-sub  { font-size: 10px; color: var(--text3); margin-top: 1px; }
+
+        /* Nav */
+        .sb-nav {
+            padding: 8px 8px 0;
+            flex-shrink: 0;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: var(--rs);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text3);
+            cursor: pointer;
+            transition: all .15s;
+            user-select: none;
+            border-left: 2px solid transparent;
+        }
+        .nav-item:hover { background: var(--surface2); color: var(--text2); }
+        .nav-item.active {
+            background: rgba(99,102,241,.1);
+            color: var(--text);
+            border-left-color: var(--accent);
+        }
+        .nav-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+        .nav-sep { height: 1px; background: var(--border); margin: 6px 8px; }
+
+        /* Panel area */
+        .sb-panels {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border-top: 1px solid var(--border);
+            margin-top: 6px;
+        }
+        .sb-panels::-webkit-scrollbar { width: 4px; }
+        .sb-panels::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+        .panel { display: none; flex-direction: column; gap: 9px; }
+        .panel.active { display: flex; }
+
+        /* Form elements */
+        .fld { display: flex; flex-direction: column; gap: 4px; }
+        .fld-label {
+            font-size: 10px; font-weight: 700; letter-spacing: .05em;
+            text-transform: uppercase; color: var(--text3);
+        }
+        .p-input, .p-select {
+            height: 33px; padding: 0 10px;
+            border: 1px solid var(--border2);
+            border-radius: var(--rs);
+            font-size: 12px; color: var(--text);
+            background: var(--surface2);
+            outline: none; font-family: inherit; width: 100%;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .p-input:focus, .p-select:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(99,102,241,.18);
+        }
+        .p-input::placeholder { color: var(--text3); }
+        .p-select option { background: var(--surface2); }
+
+        /* Buttons */
+        .pb {
+            height: 31px; padding: 0 12px;
+            border-radius: var(--rs);
+            font-size: 12px; font-weight: 500;
+            cursor: pointer; border: 1px solid transparent;
+            transition: all .15s; white-space: nowrap;
+            font-family: inherit;
+            display: inline-flex; align-items: center; justify-content: center; gap: 4px;
+        }
+        .pb:active { transform: scale(.97); }
+        .pb:disabled { opacity: .4; cursor: not-allowed; transform: none; }
+        .pb-primary { background: var(--primary); color: #fff; }
+        .pb-primary:hover:not(:disabled) { background: var(--primary2); }
+        .pb-accent  { background: var(--accent); color: #fff; }
+        .pb-accent:hover:not(:disabled)  { background: var(--accent2); }
+        .pb-ghost   { background: transparent; color: var(--text2); border-color: var(--border2); }
+        .pb-ghost:hover:not(:disabled)   { background: var(--surface3); color: var(--text); }
+        .pb-danger  { background: transparent; color: var(--danger); border-color: rgba(239,68,68,.4); }
+        .pb-danger:hover:not(:disabled)  { background: rgba(239,68,68,.1); }
+        .pb-green   { background: var(--success); color: #fff; }
+        .pb-full    { width: 100%; }
+
+        .btn-row { display: flex; gap: 6px; }
+        .btn-row .pb { flex: 1; }
+
+        /* Status text */
+        .p-status { font-size: 11px; color: var(--text3); line-height: 1.5; min-height: 14px; }
+
+        /* Badge */
+        .kb-badge {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 3px 9px; border-radius: 20px;
+            font-size: 11px; font-weight: 600; border: 1px solid transparent;
+        }
+        .kb-badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; }
+        .kb-badge.success { background: rgba(34,197,94,.1); color: var(--success); border-color: rgba(34,197,94,.3); }
+        .kb-badge.success::before { background: var(--success); }
+        .kb-badge.warning { background: rgba(245,158,11,.1); color: var(--warning); border-color: rgba(245,158,11,.3); }
+        .kb-badge.warning::before { background: var(--warning); }
+
+        /* Progress */
+        .p-progress { display: none; align-items: center; gap: 6px; }
+        .p-progress-bar { flex: 1; height: 4px; background: var(--surface3); border-radius: 2px; overflow: hidden; }
+        .p-progress-fill { height: 100%; background: var(--primary); border-radius: 2px; transition: width .3s; }
+        .p-progress-txt { font-size: 11px; color: var(--text3); white-space: nowrap; }
+
+        /* Stats grid */
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+        .stat-card {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: var(--rs); padding: 10px 12px;
+        }
+        .stat-card.wide { grid-column: span 2; }
+        .stat-lbl { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text3); margin-bottom: 4px; }
+        .stat-val { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1; }
+
+        /* Stars */
+        .star-row { display: flex; gap: 4px; }
+        .star {
+            font-size: 22px; cursor: pointer; color: var(--border2);
+            transition: color .12s, transform .12s; user-select: none;
+        }
+        .star:hover, .star.active { color: var(--primary); }
+        .star:hover { transform: scale(1.15); }
+        .star-row.submitted .star { cursor: default; transform: none; }
+        .rating-hint { font-size: 11px; color: var(--text3); }
+
+        /* Panel divider */
+        .pdiv { height: 1px; background: var(--border); }
+        .psec { font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text2); }
+
+        /* Sidebar footer */
+        .sb-footer {
+            padding: 10px;
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .conn-badge {
+            display: flex; align-items: center; justify-content: center; gap: 6px;
+            font-size: 11px; color: var(--text3);
+            padding: 6px 10px;
+            border: 1px solid var(--border2); border-radius: 20px;
+            transition: all .2s;
+        }
+        .conn-badge::before {
+            content: ''; width: 6px; height: 6px; border-radius: 50%;
+            background: var(--text3); transition: background .2s;
+        }
+        .conn-badge.connected { border-color: rgba(34,197,94,.4); color: var(--success); }
+        .conn-badge.connected::before { background: var(--success); box-shadow: 0 0 5px var(--success); }
+
+        /* ══════════════════════════════
+           Chat main area
+        ══════════════════════════════ */
+        .chat-main {
+            flex: 1; display: flex; flex-direction: column;
+            min-width: 0; background: var(--bg); position: relative;
+        }
+
+        .chat-topbar {
+            height: 50px;
+            padding: 0 20px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .chat-topbar-left { display: flex; align-items: center; gap: 10px; }
+        .chat-topbar-av {
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg, var(--accent), #8b5cf6);
+            border-radius: 8px;
+            display: grid; place-items: center;
+            font-size: 12px; font-weight: 800; color: #fff;
+            box-shadow: 0 2px 10px rgba(99,102,241,.3);
+        }
+        .chat-topbar-name { font-size: 14px; font-weight: 700; }
+        .chat-topbar-sub  { font-size: 11px; color: var(--text3); }
+        .online-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--success); box-shadow: 0 0 5px var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        /* Messages */
+        .messages {
+            flex: 1; overflow-y: auto;
+            padding: 20px 24px;
+            display: flex; flex-direction: column; gap: 14px;
+        }
+        .messages::-webkit-scrollbar { width: 5px; }
+        .messages::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+        .message { display: flex; gap: 9px; animation: msgIn .22s ease; }
+        .message.user { flex-direction: row-reverse; align-self: flex-end; max-width: 75%; }
+        .message.bot  { align-self: flex-start; width: 100%; max-width: 820px; }
+
+        .av {
+            width: 30px; height: 30px; border-radius: 8px;
+            display: grid; place-items: center;
+            font-size: 11px; font-weight: 800; flex-shrink: 0; margin-top: 2px;
+        }
+        .av-bot  { background: linear-gradient(135deg, #6366f1, #8b5cf6); color: #fff; box-shadow: 0 2px 8px rgba(99,102,241,.3); }
+        .av-user { background: linear-gradient(135deg, var(--primary), #f43f5e); color: #fff; box-shadow: 0 2px 8px rgba(249,115,22,.3); }
+
+        .bw { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1; }
+        .message.user .bw { align-items: flex-end; flex: none; }
+
+        .bubble {
+            padding: 11px 15px;
+            font-size: 13px; line-height: 1.72; word-break: break-word;
+        }
+        .message.user .bubble {
+            background: var(--surface2);
+            border: 1px solid var(--border2);
+            color: var(--text);
+            border-radius: 12px 4px 12px 12px;
+            max-width: 100%;
+        }
+        .message.bot .bubble {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 4px 12px 12px 12px;
+        }
+
+        /* Meta row */
+        .msg-meta { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+        .cat-tag {
+            font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+            color: #818cf8; background: rgba(99,102,241,.14);
+            border: 1px solid rgba(99,102,241,.3); padding: 2px 6px; border-radius: 4px;
+        }
+        .kg-tag {
+            font-size: 9px; font-weight: 700; letter-spacing: .05em;
+            color: #c084fc; background: rgba(192,132,252,.14);
+            border: 1px solid rgba(192,132,252,.35); padding: 2px 5px; border-radius: 3px;
+        }
+        .time-tag { font-size: 10px; color: var(--text3); }
+
+        /* Markdown */
+        .md-body { font-size: 13px; line-height: 1.78; }
+        .md-body p { margin-bottom: 8px; }
+        .md-body p:last-child { margin-bottom: 0; }
+        .md-body strong { color: var(--text); font-weight: 700; }
+        .md-body em { color: var(--text2); }
+        .md-body code {
+            background: var(--surface3); border: 1px solid var(--border2);
+            padding: 2px 6px; border-radius: 4px;
+            font-family: "Consolas","SF Mono",monospace; font-size: 12px; color: #7c3aed;
+        }
+        .md-body pre { background: var(--surface3); border: 1px solid var(--border2); border-radius: var(--rs); padding: 10px 14px; overflow-x: auto; margin: 8px 0; }
+        .md-body pre code { background: none; border: none; padding: 0; }
+        .md-body ol, .md-body ul { padding-left: 18px; margin-bottom: 8px; }
+        .md-body li { margin-bottom: 3px; }
+        .md-body h1,.md-body h2,.md-body h3 { font-size: 13px; font-weight: 700; color: var(--text); margin: 10px 0 4px; }
+        .md-body blockquote { border-left: 3px solid var(--accent); padding-left: 10px; color: var(--text2); margin: 6px 0; }
+
+        /* Sources */
+        .src-toggle {
+            display: inline-flex; align-items: center; gap: 4px;
+            margin-top: 8px; font-size: 11px; color: var(--text3);
+            cursor: pointer; border: none; background: none;
+            padding: 0; font-family: inherit; transition: color .15s;
+        }
+        .src-toggle:hover { color: var(--accent); }
+        .src-list {
+            margin-top: 5px; border: 1px solid var(--border);
+            border-radius: var(--rs); overflow: hidden; background: var(--surface2);
+        }
+        .src-item {
+            padding: 6px 10px; font-size: 11px; color: var(--text2);
+            line-height: 1.5; border-bottom: 1px solid var(--border);
+        }
+        .src-item:last-child { border-bottom: none; }
+        .src-pct { color: var(--text3); margin-left: 4px; font-variant-numeric: tabular-nums; }
+
+        /* Similar questions */
+        .similar-questions { margin-top: 8px; }
+        .similar-questions-title { font-size: 11px; color: var(--text3); margin-bottom: 5px; font-weight: 600; }
+        .similar-q-list { display: flex; flex-wrap: wrap; gap: 5px; }
+        .similar-q-item {
+            font-size: 11px; color: var(--accent);
+            background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.28);
+            border-radius: 4px; padding: 4px 8px; cursor: pointer; transition: all .15s;
+        }
+        .similar-q-item:hover { background: rgba(99,102,241,.2); border-color: var(--accent); }
+
+        /* Typing */
+        .typing-indicator { display: flex; gap: 4px; align-items: center; padding: 2px 0; }
+        .typing-indicator span {
+            width: 7px; height: 7px; background: var(--accent);
+            border-radius: 50%; animation: blink 1.4s infinite; opacity: .7;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: .2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: .4s; }
+
+        /* Chat footer */
+        .chat-footer {
+            background: var(--surface); border-top: 1px solid var(--border);
+            padding: 7px 20px 6px;
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+        }
+        .chat-footer .pb { height: 26px; padding: 0 10px; font-size: 11px; }
+
+        /* Rating bar above input */
+        .rating-bar {
+            display: flex; align-items: center; gap: 12px;
+            padding: 6px 20px;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .rating-bar .fld-label { font-size: 11px; color: var(--text3); white-space: nowrap; margin: 0; }
+        .rating-bar .star-row { gap: 2px; }
+        .rating-bar .star { font-size: 18px; }
+        .rating-bar .resolve-btn-sm {
+            height: 24px; padding: 0 8px; font-size: 11px;
+            border-radius: var(--rs); cursor: pointer; border: 1px solid var(--border2);
+            background: transparent; color: var(--text2); font-family: inherit;
+            transition: all .15s;
+        }
+        .rating-bar .resolve-btn-sm:hover { background: var(--surface2); }
+        .rating-bar .resolve-btn-sm.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .rating-bar .rating-hint { font-size: 11px; color: var(--text3); margin-left: auto; }
+
+        /* Input area */
+        .input-area {
+            padding: 10px 20px 16px;
+            background: var(--surface);
+            display: flex; gap: 8px; align-items: center; flex-shrink: 0;
+        }
+        .input-area input {
+            flex: 1; height: 42px; padding: 0 14px;
+            border: 1px solid var(--border2); border-radius: var(--r);
+            font-size: 13px; color: var(--text); background: var(--surface2);
+            outline: none; font-family: inherit;
+            transition: border-color .15s, box-shadow .15s;
+        }
+        .input-area input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(99,102,241,.15);
+        }
+        .input-area input::placeholder { color: var(--text3); }
+        .send-btn {
+            height: 42px; width: 46px;
+            background: linear-gradient(135deg, var(--primary), #f43f5e);
+            color: #fff; border: none; border-radius: var(--r);
+            font-size: 16px; cursor: pointer;
+            transition: opacity .15s, transform .1s;
+            display: grid; place-items: center; flex-shrink: 0;
+            box-shadow: 0 3px 12px rgba(249,115,22,.35);
+        }
+        .send-btn:hover:not(:disabled) { opacity: .88; }
+        .send-btn:active:not(:disabled) { transform: scale(.95); }
+        .send-btn:disabled { background: var(--border2); box-shadow: none; cursor: not-allowed; }
+
+        /* KG overlay */
+        .kg-container { display: none; position: absolute; inset: 0; background: var(--bg); z-index: 10; }
+        .kg-container.active { display: block; }
+        #kg-network { width: 100%; height: 100%; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 20px; right: 20px;
+            padding: 10px 16px; background: var(--surface2); color: var(--text);
+            border: 1px solid var(--border2); border-radius: var(--r);
+            font-size: 12px; font-weight: 500; z-index: 9999;
+            box-shadow: 0 8px 28px rgba(0,0,0,.15);
+            display: flex; align-items: center; gap: 8px;
+            animation: toastIn .2s ease, toastOut .2s ease 2.8s forwards;
+        }
+        .toast::before { content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0; }
+        .toast.success::before { background: var(--success); box-shadow: 0 0 6px var(--success); }
+        .toast.error::before   { background: var(--danger);  box-shadow: 0 0 6px var(--danger); }
+        .toast.info::before    { background: var(--accent);  box-shadow: 0 0 6px var(--accent); }
+
+        /* Animations */
+        @keyframes msgIn    { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes toastIn  { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes toastOut { from { opacity:1; } to { opacity:0; } }
+        @keyframes blink    { 0%,60%,100%{opacity:.3;transform:translateY(0)} 30%{opacity:1;transform:translateY(-4px)} }
+        @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.5} }
+        .pulse { animation: pulse 1.5s infinite; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+
+    <!-- ══════════════════════════════
+         Sidebar
+    ══════════════════════════════ -->
+    <aside class="sidebar">
+
+        <div class="sb-logo">
+            <div class="logo-box">AI</div>
+            <div>
+                <div class="logo-name">智能客服系统</div>
+                <div class="logo-sub"></div>
+            </div>
+        </div>
+
+        <nav class="sb-nav">
+            <div class="nav-item active" onclick="switchTab('config')" id="tab-config">
+                <span class="nav-icon">⚙</span>模型配置
+            </div>
+            <div class="nav-item" onclick="switchTab('kb')" id="tab-kb">
+                <span class="nav-icon">◫</span>知识库
+            </div>
+            <div class="nav-sep"></div>
+            <div class="nav-item" onclick="switchTab('kg')" id="tab-kg">
+                <span class="nav-icon">◉</span>知识图谱
+            </div>
+            <div class="nav-sep"></div>
+            <div class="nav-item" onclick="switchTab('demo')" id="tab-demo">
+                <span class="nav-icon">🚀</span>演示数据
+            </div>
+            <div class="nav-sep"></div>
+            <div class="nav-item" onclick="switchTab('stats')" id="tab-stats">
+                <span class="nav-icon">📊</span>统计
+            </div>
+        </nav>
+
+        <div class="sb-panels">
+
+            <!-- 模型配置 -->
+            <div class="panel active" id="panel-config">
+                <div class="fld">
+                    <div class="fld-label">服务商</div>
+                    <select class="p-select" id="provider-select" onchange="selectProvider()">
+                        <option value="">手动填写</option>
+                        <option value="deepseek">DeepSeek</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="custom">自定义</option>
+                    </select>
+                </div>
+                <div class="fld">
+                    <div class="fld-label">API Key</div>
+                    <input type="password" class="p-input" id="api-key-input" placeholder="sk-xxxxxxxxxxxxxxxx">
+                </div>
+                <div class="fld">
+                    <div class="fld-label">Base URL</div>
+                    <input type="text" class="p-input" id="base-url-input" placeholder="https://api.deepseek.com">
+                </div>
+                <div class="fld">
+                    <div class="fld-label">Model</div>
+                    <input type="text" class="p-input" id="model-input" placeholder="deepseek-chat">
+                </div>
+                <div class="btn-row">
+                    <button class="pb pb-primary" onclick="saveConfig()">保存</button>
+                    <button class="pb pb-accent"  onclick="testConnection()">测试连接</button>
+                </div>
+                <div class="p-status" id="config-status"></div>
+            </div>
+
+            <!-- 知识库 -->
+            <div class="panel" id="panel-kb">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:4px;">
+                    <span class="kb-badge warning" id="kb-badge"><span id="kb-text">加载中</span></span>
+                    <span class="p-status" id="kb-detail">向量数：—</span>
+                </div>
+                <div class="pdiv"></div>
+                <div class="fld">
+                    <div class="fld-label">上传文档（PDF / DOCX / TXT）</div>
+                    <input type="file" id="file-input" accept=".pdf,.docx,.doc,.txt" style="font-size:11px;color:var(--text2);width:100%;">
+                </div>
+                <div class="p-progress" id="upload-progress">
+                    <span class="p-progress-txt" id="upload-text">处理中</span>
+                    <div class="p-progress-bar"><div class="p-progress-fill" id="upload-fill" style="width:0%"></div></div>
+                </div>
+                <div class="btn-row">
+                    <button class="pb pb-primary" onclick="uploadFile()">上传</button>
+                    <button class="pb pb-danger"  onclick="clearKB()">清空</button>
+                </div>
+                <div class="p-status" id="upload-msg"></div>
+            </div>
+
+            <!-- 统计 -->
+            <div class="panel" id="panel-stats">
+                <div class="stat-grid">
+                    <div class="stat-card">
+                        <div class="stat-lbl">对话数</div>
+                        <div class="stat-val" id="stat-total">0</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-lbl">响应时间</div>
+                        <div class="stat-val" id="stat-time">—</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-lbl">平均评分</div>
+                        <div class="stat-val" id="stat-rating">—</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-lbl">满意率</div>
+                        <div class="stat-val" id="stat-satisfaction">—</div>
+                    </div>
+                    <div class="stat-card wide">
+                        <div class="stat-lbl">解决率</div>
+                        <div class="stat-val" id="stat-resolution">—</div>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <!-- 演示数据 -->
+            <div class="panel" id="panel-demo">
+                <div class="psec">一键初始化演示数据</div>
+                <div style="color:var(--text2);font-size:12px;line-height:1.6;margin-bottom:4px;">
+                    重置维修工单 &amp; 物流订单为完整演示数据集，每次录屏前点一次。
+                </div>
+                <button class="pb pb-primary pb-full" onclick="initDemoData()" id="demo-init-btn">🚀 一键初始化</button>
+                <div class="p-status" id="demo-status"></div>
+                <div id="demo-result" style="display:none;margin-top:6px;">
+                    <div class="psec" style="margin-top:4px;">维修工单</div>
+                    <div id="demo-repair-ids" style="font-size:11px;color:var(--text2);line-height:1.8;"></div>
+                    <div class="psec" style="margin-top:8px;">物流订单</div>
+                    <div id="demo-order-ids" style="font-size:11px;color:var(--text2);line-height:1.8;"></div>
+                </div>
+            </div>
+
+            <!-- 知识图谱 -->
+            <div class="panel" id="panel-kg">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span class="kb-badge success" id="kg-badge"><span id="kg-stats-text">加载中</span></span>
+                </div>
+                <div class="btn-row">
+                    <button class="pb pb-primary" onclick="loadKGVisualization()">加载图谱</button>
+                    <button class="pb pb-ghost"   onclick="resetKGView()">重置视图</button>
+                </div>
+                <div class="p-status" id="kg-status"></div>
+            </div>
+
+        </div><!-- /sb-panels -->
+
+        <div class="sb-footer">
+            <div class="conn-badge disconnected" id="header-status">未连接</div>
+        </div>
+    </aside>
+
+    <!-- ══════════════════════════════
+         Chat main
+    ══════════════════════════════ -->
+    <main class="chat-main">
+
+        <div class="chat-topbar">
+            <div class="chat-topbar-left">
+                <div class="chat-topbar-av">AI</div>
+                <div>
+                    <div class="chat-topbar-name">智能客服小星</div>
+                    <div class="chat-topbar-sub"></div>
+                </div>
+            </div>
+            <div class="online-dot"></div>
+        </div>
+
+        <div class="kg-container" id="kg-container">
+            <div id="kg-network"></div>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="message bot">
+                <div class="av av-bot">AI</div>
+                <div class="bw">
+                    <div class="bubble">
+                        您好，我是智能客服 <strong>小星</strong>，很高兴为您服务。<br><br>
+                        请先在左侧完成 <strong>模型配置</strong> 并上传 <strong>知识库</strong> 文档，然后即可开始提问。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-footer">
+            <button type="button" class="pb pb-ghost" onclick="clearChat()">清空对话</button>
+        </div>
+
+        <div class="rating-bar">
+            <span class="fld-label">满意度评价</span>
+            <div class="star-row" id="star-row">
+                <span class="star" data-v="1">★</span>
+                <span class="star" data-v="2">★</span>
+                <span class="star" data-v="3">★</span>
+                <span class="star" data-v="4">★</span>
+                <span class="star" data-v="5">★</span>
+            </div>
+            <button class="resolve-btn-sm resolve-btn" data-resolved="true" onclick="setResolved(true)">已解决</button>
+            <button class="resolve-btn-sm resolve-btn" data-resolved="false" onclick="setResolved(false)">未解决</button>
+            <span class="rating-hint" id="rating-hint">点击星级提交评价</span>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="user-input"
+                   placeholder="输入您的问题，按 Enter 发送…"
+                   onkeydown="if(event.key==='Enter')sendMessage()">
+            <button class="send-btn" id="send-btn" onclick="sendMessage()">➤</button>
+        </div>
+
+    </main>
+
+</div><!-- /app -->
+
+<script>
+    const sessionId = 'session_' + Date.now();
+    let messageCount = 0;
+    let totalResponseTime = 0;
+    let userResolved = null;
+
+    // ── Tab switch ──
+    function switchTab(name) {
+        document.querySelectorAll('.nav-item').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+        document.getElementById('tab-' + name).classList.add('active');
+        document.getElementById('panel-' + name).classList.add('active');
+    }
+
+    // ── Toast ──
+    function showToast(message, type = 'info') {
+        const t = document.createElement('div');
+        t.className = `toast ${type}`;
+        t.textContent = message;
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 3000);
+    }
+
+    function setResolved(val) {
+        userResolved = val;
+        document.querySelectorAll('.resolve-btn').forEach(b => {
+            b.classList.toggle('active', String(val) === b.dataset.resolved);
+        });
+    }
+
+    // ── Provider preset ──
+    function selectProvider() {
+        const v = document.getElementById('provider-select').value;
+        const map = {
+            deepseek: { url: 'https://api.deepseek.com', model: 'deepseek-chat' },
+            openai:   { url: 'https://api.openai.com/v1', model: 'gpt-3.5-turbo' },
+        };
+        if (map[v]) {
+            document.getElementById('base-url-input').value = map[v].url;
+            document.getElementById('model-input').value    = map[v].model;
+        }
+    }
+
+    // ── Config ──
+    async function saveConfig() {
+        const apiKey  = document.getElementById('api-key-input').value.trim();
+        const baseUrl = document.getElementById('base-url-input').value.trim();
+        const model   = document.getElementById('model-input').value.trim();
+        if (!apiKey) { showToast('请输入 API Key', 'error'); return; }
+        try {
+            const res = await fetch('/api/config/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ api_key: apiKey, base_url: baseUrl || 'https://api.deepseek.com', model: model || 'deepseek-chat' }),
+            });
+            if (!res.ok) throw new Error('保存失败');
+            const data = await res.json();
+            document.getElementById('config-status').innerHTML =
+                `<span style="color:var(--success);">${data.api_key_preview} · ${model || 'deepseek-chat'}</span>`;
+            showToast('配置已保存', 'success');
+        } catch (e) { showToast('保存失败：' + e.message, 'error'); }
+    }
+
+    async function testConnection() {
+        document.getElementById('config-status').innerHTML =
+            '<span class="pulse" style="color:var(--accent);">测试中…</span>';
+        try {
+            const res = await fetch('/api/config/test', { method: 'POST' });
+            if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||'失败'); }
+            const data = await res.json();
+            document.getElementById('config-status').innerHTML =
+                `<span style="color:var(--success);">✓ 连接成功 · ${data.model} · ${data.elapsed_seconds}s · ${data.total_tokens} tokens</span>`;
+            updateHeaderStatus(true);
+            showToast('连接成功', 'success');
+        } catch (e) {
+            document.getElementById('config-status').innerHTML =
+                `<span style="color:var(--danger);">✗ ${e.message}</span>`;
+            updateHeaderStatus(false);
+            showToast('连接失败', 'error');
+        }
+    }
+
+    function updateHeaderStatus(connected) {
+        const el = document.getElementById('header-status');
+        el.className = 'conn-badge ' + (connected ? 'connected' : 'disconnected');
+        el.textContent = connected ? '已连接' : '未连接';
+    }
+
+    // ── Knowledge base ──
+    async function uploadFile() {
+        const fi = document.getElementById('file-input');
+        if (!fi.files.length) { showToast('请选择文件', 'error'); return; }
+        const fd = new FormData();
+        fd.append('file', fi.files[0]);
+        const prog = document.getElementById('upload-progress');
+        const fill = document.getElementById('upload-fill');
+        const txt  = document.getElementById('upload-text');
+        prog.style.display = 'flex'; fill.style.width = '30%'; txt.textContent = '解析中…';
+        try {
+            fill.style.width = '60%'; txt.textContent = '向量化…';
+            const res = await fetch('/api/knowledge/upload', { method: 'POST', body: fd });
+            if (!res.ok) { const e = await res.json().catch(()=>({})); throw new Error(e.detail||'失败'); }
+            const data = await res.json();
+            fill.style.width = '100%'; txt.textContent = '完成';
+            document.getElementById('upload-msg').innerHTML = `<span style="color:var(--success);">${data.message}</span>`;
+            showToast(data.message, 'success');
+            loadKBStatus();
+            setTimeout(() => { prog.style.display = 'none'; }, 1500);
+        } catch (e) {
+            fill.style.background = 'var(--danger)'; txt.textContent = '失败';
+            document.getElementById('upload-msg').innerHTML = `<span style="color:var(--danger);">${e.message}</span>`;
+            showToast('上传失败', 'error');
+            setTimeout(() => { prog.style.display = 'none'; fill.style.background = 'var(--primary)'; }, 2000);
+        }
+    }
+
+    async function clearKB() {
+        if (!confirm('确定要清空知识库吗？')) return;
+        await fetch('/api/knowledge/clear', { method: 'DELETE' });
+        showToast('知识库已清空', 'info');
+        loadKBStatus();
+    }
+
+    async function loadKBStatus() {
+        try {
+            const res  = await fetch('/api/knowledge/status');
+            const data = await res.json();
+            const badge = document.getElementById('kb-badge');
+            const text  = document.getElementById('kb-text');
+            if (data.status === 'ready') { badge.className = 'kb-badge success'; text.textContent = '就绪'; }
+            else                         { badge.className = 'kb-badge warning'; text.textContent = '为空'; }
+            document.getElementById('kb-detail').textContent = `向量数：${data.total_vectors}`;
+        } catch (e) { document.getElementById('kb-text').textContent = '异常'; }
+    }
+
+    // ── Chat ──
+    const categoryMap = {
+        product_qa:'产品问答', after_sales:'售后支持', ecommerce:'电商服务',
+        repair_track:'维修跟踪', logistics_track:'物流跟踪', other:'其他'
+    };
+
+    async function sendMessage() {
+        const input    = document.getElementById('user-input');
+        const question = input.value.trim();
+        if (!question) return;
+        appendMessage('user', question);
+        input.value = '';
+        const sendBtn = document.getElementById('send-btn');
+        sendBtn.disabled = true;
+        appendTyping();
+        const startTime = Date.now();
+        try {
+            const res = await fetch('/api/chat/stream', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, question }),
+            });
+            if (!res.ok) { removeTyping(); appendMessage('bot','服务异常，请稍后重试。'); sendBtn.disabled=false; return; }
+
+            const reader  = res.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '', bubbleEl=null, answerEl=null, tagEl=null, timeEl=null;
+            let sourcesData = [], rawAnswer = '', similarQuestions = [];
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const parts = buffer.split('\n\n');
+                buffer = parts.pop();
+                for (const part of parts) {
+                    if (!part.startsWith('data: ')) continue;
+                    let event;
+                    try { event = JSON.parse(part.slice(6)); } catch { continue; }
+
+                    if (event.type === 'meta') {
+                        removeTyping();
+                        sourcesData      = event.sources || [];
+                        similarQuestions = event.similar_questions || [];
+                        ({ bubbleEl, answerEl, tagEl, timeEl } = createBotBubble(categoryMap[event.category]||'其他', event.kg_used));
+
+                    } else if (event.type === 'token') {
+                        if (!bubbleEl) { removeTyping(); ({ bubbleEl, answerEl, tagEl, timeEl } = createBotBubble('')); }
+                        rawAnswer += event.content;
+                        answerEl.textContent = rawAnswer;
+                        scrollToBottom();
+
+                    } else if (event.type === 'done') {
+                        if (answerEl && rawAnswer) { answerEl.className = 'md-body'; answerEl.innerHTML = marked.parse(rawAnswer); }
+                        const elapsed = ((Date.now()-startTime)/1000).toFixed(1);
+                        if (timeEl) timeEl.textContent = `${elapsed}s`;
+                        if (bubbleEl) appendSources(bubbleEl, sourcesData);
+                        if (bubbleEl && similarQuestions.length) appendSimilarQuestions(bubbleEl, similarQuestions);
+                        messageCount++; totalResponseTime += parseFloat(elapsed);
+                        updateStats(); scrollToBottom();
+
+                    } else if (event.type === 'error') {
+                        removeTyping(); appendMessage('bot', event.content||'服务异常');
+                    }
+                }
+            }
+        } catch (e) { removeTyping(); appendMessage('bot','网络异常，请检查服务是否启动。'); }
+        sendBtn.disabled = false;
+    }
+
+    function createBotBubble(tag, kgUsed) {
+        const div    = document.createElement('div');   div.className = 'message bot';
+        const av     = document.createElement('div');   av.className  = 'av av-bot'; av.textContent = 'AI';
+        const bw     = document.createElement('div');   bw.className  = 'bw';
+        const bubble = document.createElement('div');   bubble.className = 'bubble';
+        const meta   = document.createElement('div');   meta.className   = 'msg-meta';
+        const tagEl  = document.createElement('span');  tagEl.className  = 'cat-tag';
+        if (tag) tagEl.textContent = tag;
+        const timeEl = document.createElement('span');  timeEl.className = 'time-tag';
+        meta.appendChild(tagEl);
+        if (kgUsed) {
+            const kgTag = document.createElement('span');
+            kgTag.className = 'kg-tag'; kgTag.textContent = 'KG';
+            meta.appendChild(kgTag);
+        }
+        meta.appendChild(timeEl);
+        bubble.appendChild(meta);
+        const answerEl = document.createElement('span');
+        bubble.appendChild(answerEl);
+        bw.appendChild(bubble);
+        div.appendChild(av);
+        div.appendChild(bw);
+        document.getElementById('messages').appendChild(div);
+        scrollToBottom();
+        return { bubbleEl: bubble, answerEl, tagEl, timeEl };
+    }
+
+    function appendSources(bubbleEl, sources) {
+        if (!sources || !sources.length) return;
+        const details = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.className = 'src-toggle';
+        summary.textContent = `参考来源（${sources.length}）`;
+        details.appendChild(summary);
+        const list = document.createElement('div'); list.className = 'src-list';
+        sources.forEach((s, i) => {
+            const item = document.createElement('div'); item.className = 'src-item';
+            const pct  = document.createElement('span'); pct.className = 'src-pct';
+            pct.textContent = `${(s.similarity*100).toFixed(1)}%`;
+            item.textContent = `${i+1}. ${s.content.substring(0,80)}…`;
+            item.appendChild(pct); list.appendChild(item);
+        });
+        details.appendChild(list); bubbleEl.appendChild(details);
+    }
+
+    function appendSimilarQuestions(bubbleEl, questions) {
+        if (!questions || !questions.length) return;
+        const wrap = document.createElement('div');
+        wrap.className = 'similar-questions';
+        wrap.innerHTML = '<div class="similar-questions-title">猜你还想问</div>';
+        const list = document.createElement('div'); list.className = 'similar-q-list';
+        questions.forEach(q => {
+            const item = document.createElement('span');
+            item.className = 'similar-q-item';
+            item.textContent = q;
+            item.onclick = () => { document.getElementById('user-input').value = q; sendMessage(); };
+            list.appendChild(item);
+        });
+        wrap.appendChild(list);
+        bubbleEl.appendChild(wrap);
+    }
+
+    function appendMessage(role, content) {
+        const div    = document.createElement('div');   div.className = `message ${role}`;
+        const av     = document.createElement('div');   av.className  = role === 'user' ? 'av av-user' : 'av av-bot';
+        av.textContent = role === 'user' ? '我' : 'AI';
+        const bw     = document.createElement('div');   bw.className  = 'bw';
+        const bubble = document.createElement('div');   bubble.className = 'bubble';
+        bubble.textContent = content;
+        bw.appendChild(bubble);
+        div.appendChild(av);
+        div.appendChild(bw);
+        document.getElementById('messages').appendChild(div);
+        scrollToBottom();
+    }
+
+    function appendTyping() {
+        const div  = document.createElement('div');  div.className = 'message bot'; div.id = 'typing-msg';
+        const av   = document.createElement('div');  av.className  = 'av av-bot';   av.textContent = 'AI';
+        const bw   = document.createElement('div');  bw.className  = 'bw';
+        const bubble = document.createElement('div'); bubble.className = 'bubble';
+        bubble.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+        bw.appendChild(bubble); div.appendChild(av); div.appendChild(bw);
+        document.getElementById('messages').appendChild(div); scrollToBottom();
+    }
+    function removeTyping() { const el = document.getElementById('typing-msg'); if (el) el.remove(); }
+    function scrollToBottom() { const m = document.getElementById('messages'); m.scrollTop = m.scrollHeight; }
+
+    function clearChat() {
+        const messages = document.getElementById('messages');
+        messages.innerHTML = '';
+        appendMessage('bot', '对话已清空，您可以继续提问。');
+    }
+
+    // ── Stats ──
+    function updateStats() {
+        document.getElementById('stat-total').textContent = messageCount;
+        if (messageCount > 0)
+            document.getElementById('stat-time').textContent = (totalResponseTime/messageCount).toFixed(1)+'s';
+    }
+
+    // ── Stars ──
+    (function initStars() {
+        const row   = document.getElementById('star-row');
+        const hint  = document.getElementById('rating-hint');
+        const stars = row.querySelectorAll('.star');
+        stars.forEach(star => {
+            star.addEventListener('mouseenter', () => {
+                if (row.classList.contains('submitted')) return;
+                const v = +star.dataset.v;
+                stars.forEach(s => s.classList.toggle('active', +s.dataset.v <= v));
+            });
+            star.addEventListener('mouseleave', () => {
+                if (row.classList.contains('submitted')) return;
+                stars.forEach(s => s.classList.remove('active'));
+            });
+            star.addEventListener('click', async () => {
+                if (row.classList.contains('submitted')) return;
+                const rating = +star.dataset.v;
+                row.classList.add('submitted');
+                stars.forEach(s => s.classList.toggle('active', +s.dataset.v <= rating));
+                hint.style.color = 'var(--success)';
+                hint.textContent = `已提交 ${rating} 星，感谢反馈`;
+                try {
+                    const payload = { session_id: sessionId, rating };
+                    if (userResolved !== null) payload.resolved = userResolved;
+                    await fetch('/api/feedback/submit', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                    loadFeedbackStats();
+                } catch (e) {
+                    hint.style.color = 'var(--danger)'; hint.textContent = '提交失败';
+                    row.classList.remove('submitted');
+                }
+            });
+        });
+    })();
+
+    async function loadFeedbackStats() {
+        try {
+            const res  = await fetch('/api/feedback/stats');
+            const data = await res.json();
+            if (data.total > 0) {
+                document.getElementById('stat-rating').textContent       = data.avg_rating;
+                document.getElementById('stat-satisfaction').textContent = data.satisfaction_rate + '%';
+            }
+            if (data.resolution_rate != null)
+                document.getElementById('stat-resolution').textContent = data.resolution_rate + '%';
+        } catch (e) {}
+    }
+
+    async function loadCurrentConfig() {
+        try {
+            const res  = await fetch('/api/config/current');
+            const data = await res.json();
+            document.getElementById('base-url-input').value = data.base_url;
+            document.getElementById('model-input').value    = data.model;
+            document.getElementById('config-status').innerHTML =
+                `<span style="color:var(--text3);">${data.api_key_preview} · ${data.model}</span>`;
+        } catch (e) {}
+    }
+
+    // ── Repair ──
+    async function createRepairTicket() {
+        const phone   = document.getElementById('repair-phone').value.trim();
+        const product = document.getElementById('repair-product').value.trim();
+        const issue   = document.getElementById('repair-issue').value.trim();
+        if (!phone || !product || !issue) { showToast('请填写完整信息', 'error'); return; }
+        try {
+            const res  = await fetch('/api/repair/create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, product, issue }),
+            });
+            const data = await res.json();
+            document.getElementById('repair-status').innerHTML =
+                `<span style="color:var(--success);">已创建：${data.ticket.ticket_id}</span>`;
+            showToast(`工单 ${data.ticket.ticket_id} 已创建`, 'success');
+        } catch (e) { showToast('创建失败', 'error'); }
+    }
+
+    async function queryRepairTicket() {
+        const tid = document.getElementById('repair-query-id').value.trim();
+        if (!tid) { showToast('请输入工单号', 'error'); return; }
+        try {
+            const res = await fetch(`/api/repair/${tid}`);
+            if (!res.ok) { showToast('工单不存在', 'error'); return; }
+            const t = await res.json();
+            document.getElementById('repair-status').innerHTML =
+                `<span style="color:var(--text2);">${t.ticket_id} | ${t.product} | ${t.issue} | ${t.status}</span>`;
+        } catch (e) { showToast('查询失败', 'error'); }
+    }
+
+    async function listRepairTickets() {
+        try {
+            const res  = await fetch('/api/repair/list');
+            const data = await res.json();
+            if (!data.tickets.length) {
+                document.getElementById('repair-status').innerHTML = '<span style="color:var(--text3);">暂无工单</span>'; return;
+            }
+            const html = data.tickets.map(t => `${t.ticket_id}: ${t.product} / ${t.status}`).join(' · ');
+            document.getElementById('repair-status').innerHTML = `<span style="color:var(--text2);">${html}</span>`;
+        } catch (e) { showToast('查询失败', 'error'); }
+    }
+
+    // ── Logistics ──
+    async function createLogisticsOrder() {
+        const items   = document.getElementById('logistics-items').value.trim();
+        const carrier = document.getElementById('logistics-carrier').value.trim();
+        if (!items) { showToast('请填写商品名称', 'error'); return; }
+        try {
+            const res  = await fetch('/api/logistics/create', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ items, carrier: carrier || '顺丰速运' }),
+            });
+            const data = await res.json();
+            document.getElementById('logistics-status').innerHTML =
+                `<span style="color:var(--success);">已创建：${data.order.order_id}（${data.order.tracking_no}）</span>`;
+            showToast(`订单 ${data.order.order_id} 已创建`, 'success');
+        } catch (e) { showToast('创建失败', 'error'); }
+    }
+
+    async function queryLogisticsOrder() {
+        const oid = document.getElementById('logistics-query-id').value.trim();
+        if (!oid) { showToast('请输入订单号', 'error'); return; }
+        try {
+            const res = await fetch(`/api/logistics/${oid}`);
+            if (!res.ok) { showToast('订单不存在', 'error'); return; }
+            const o = await res.json();
+            document.getElementById('logistics-status').innerHTML =
+                `<span style="color:var(--text2);">${o.order_id} | ${o.tracking_no} | ${o.carrier} | ${o.status}</span>`;
+        } catch (e) { showToast('查询失败', 'error'); }
+    }
+
+    async function listLogisticsOrders() {
+        try {
+            const res  = await fetch('/api/logistics/list');
+            const data = await res.json();
+            if (!data.orders.length) {
+                document.getElementById('logistics-status').innerHTML = '<span style="color:var(--text3);">暂无订单</span>'; return;
+            }
+            const html = data.orders.map(o => `${o.order_id}: ${o.items} / ${o.status}`).join(' · ');
+            document.getElementById('logistics-status').innerHTML = `<span style="color:var(--text2);">${html}</span>`;
+        } catch (e) { showToast('查询失败', 'error'); }
+    }
+
+    // ── Demo Data ──
+    async function initDemoData() {
+        const btn = document.getElementById('demo-init-btn');
+        const st  = document.getElementById('demo-status');
+        const res_div = document.getElementById('demo-result');
+        btn.disabled = true;
+        btn.textContent = '初始化中…';
+        st.innerHTML = '';
+        res_div.style.display = 'none';
+        try {
+            const res  = await fetch('/api/demo/init', { method: 'POST' });
+            const data = await res.json();
+            st.innerHTML = `<span style="color:var(--success);">✓ ${data.repair_tickets} 条工单 · ${data.logistics_orders} 条订单已就绪</span>`;
+            document.getElementById('demo-repair-ids').innerHTML =
+                data.repair_ids.map(id => `<span style="color:var(--accent);">${id}</span>`).join('<br>');
+            document.getElementById('demo-order-ids').innerHTML =
+                data.order_ids.map(id => `<span style="color:var(--primary);">${id}</span>`).join('<br>');
+            res_div.style.display = 'block';
+            showToast('演示数据初始化完成', 'success');
+        } catch (e) {
+            st.innerHTML = `<span style="color:var(--danger);">初始化失败</span>`;
+            showToast('初始化失败', 'error');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '🚀 一键初始化';
+        }
+    }
+
+    // ── Knowledge Graph ──
+    const _kgTypeColors = {
+        Product:'#2563eb', SKU:'#059669', Color:'#d946ef', Spec:'#f59e0b',
+        Accessory:'#06b6d4', Issue:'#dc2626', RepairItem:'#f97316',
+        Policy:'#8b5cf6', Promotion:'#ec4899', StockStatus:'#64748b'
+    };
+    let _kgNetwork = null;
+
+    async function loadKGStats() {
+        try {
+            const res  = await fetch('/api/graph/stats');
+            const data = await res.json();
+            document.getElementById('kg-stats-text').textContent = `${data.nodes} 节点 · ${data.edges} 条边`;
+        } catch (e) { document.getElementById('kg-stats-text').textContent = '未加载'; }
+    }
+
+    async function loadKGVisualization() {
+        document.getElementById('kg-status').innerHTML =
+            '<span class="pulse" style="color:var(--accent);">加载中…</span>';
+        try {
+            const res  = await fetch('/api/graph/subgraph');
+            const data = await res.json();
+            const nodes = new vis.DataSet(data.nodes.map(n => ({
+                id: n.id,
+                label: n.label || n.id,
+                color: { background: _kgTypeColors[n.type] || '#94a3b8', border: 'transparent' },
+                font:  { color: '#1a1a1a', size: 11, face: 'Microsoft YaHei' },
+                shape: 'dot', size: 14,
+            })));
+            const edges = new vis.DataSet(data.edges.map(e => ({
+                from: e.from, to: e.to,
+                label: e.relation,
+                color: { color: '#334155', opacity: 0.9 },
+                font:  { color: '#333333', size: 9, align: 'middle' },
+                arrows: { to: { enabled: true, scaleFactor: 0.5 } },
+                width: 1.2,
+            })));
+            const container = document.getElementById('kg-network');
+            const opts = {
+                physics: { stabilization: false, barnesHut: { gravitationalConstant: -3000, springLength: 100 } },
+                interaction: { tooltipDelay: 200, hideEdgesOnDrag: true },
+            };
+            if (_kgNetwork) _kgNetwork.destroy();
+            _kgNetwork = new vis.Network(container, { nodes, edges }, opts);
+            document.getElementById('kg-container').classList.add('active');
+            document.getElementById('kg-status').innerHTML =
+                `<span style="color:var(--success);">已加载 ${data.nodes.length} 节点</span>`;
+        } catch (e) {
+            document.getElementById('kg-status').innerHTML =
+                `<span style="color:var(--danger);">${e.message}</span>`;
+        }
+    }
+
+    function resetKGView() {
+        document.getElementById('kg-container').classList.remove('active');
+        if (_kgNetwork) { _kgNetwork.destroy(); _kgNetwork = null; }
+        document.getElementById('kg-status').innerHTML = '';
+    }
+
+    // ── Init ──
+    loadCurrentConfig();
+    loadKBStatus();
+    loadFeedbackStats();
+    loadKGStats();
+    setInterval(loadFeedbackStats, 30000);
+</script>
+</body>
+</html>

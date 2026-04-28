@@ -1,0 +1,31 @@
+services:
+  mysql:
+    image: mysql:8.0.36
+    container_name: rag-customer-service-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_DATABASE: rag_customer_service
+      MYSQL_USER: rag_user
+      MYSQL_PASSWORD: rag_pass
+    ports:
+      - "3306:3306"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  redis:
+    image: redis:7.2.5-alpine
+    container_name: rag-customer-service-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+volumes:
+  mysql_data:
+  redis_data:

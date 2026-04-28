@@ -1,0 +1,12 @@
+.env
+*.log
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
+data/
+redis-win/
+uvicorn.err.log
+uvicorn.out.log
