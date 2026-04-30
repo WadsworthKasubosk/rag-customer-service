@@ -1,0 +1,32 @@
+flowchart TD
+    A[开始] --> B[文档加载]
+
+    B --> C{文件类型}
+    C -->|TXT| D[load_txt]
+    C -->|PDF| E[load_pdf]
+    C -->|DOCX| F[load_docx]
+
+    D --> G[文本分割]
+    E --> G
+    F --> G
+
+    G --> H[Chunk 处理]
+    H --> I{长度 > CHUNK_SIZE?}
+    I -->|是| J[滑动窗口切分]
+    I -->|否| K[保持原样]
+
+    J --> L[生成 Chunk]
+    K --> L
+
+    L --> M{启用 MOCK 模式?}
+    M -->|是| N[存入内存缓存]
+    M -->|否| O[调用 Embeddings]
+
+    O --> P[生成向量]
+    P --> Q[FAISS 存储]
+    Q --> R[保存索引文件]
+
+    N --> S[构建完成]
+    R --> S
+
+    S --> T[结束]

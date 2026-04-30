@@ -1,0 +1,44 @@
+graph TD
+    subgraph 检索模块
+        A[检索入口 search]
+        B[FAQ 检索入口 search_faq]
+    end
+
+    subgraph 模式选择
+        C{MOCK_RETRIEVAL}
+        C -->|True| D[关键词检索]
+        C -->|False| E[向量检索]
+    end
+
+    subgraph 关键词检索
+        D --> F[_keyword_search]
+        D --> G[_keyword_search_faq]
+        F --> H[BM25 评分]
+        G --> H
+        H --> I[加载文档缓存]
+        I --> J[_docs_cache]
+        H --> K[加载 FAQ 缓存]
+        K --> L[_faq_cache]
+    end
+
+    subgraph 向量检索
+        E --> M[FAISS 向量库]
+        E --> N[FAQ Embeddings]
+        M --> O[similarity_search_with_score]
+        N --> P[向量相似度计算]
+        O --> Q[L2 距离转余弦相似度]
+        P --> Q
+    end
+
+    subgraph 底层数据
+        R[FAISS_INDEX_DIR]
+        S[DOCS_DIR]
+        T[faq.txt]
+    end
+
+    A --> C
+    B --> C
+    M --> R
+    J --> S
+    L --> T
+    N --> T

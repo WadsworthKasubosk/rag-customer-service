@@ -1,0 +1,71 @@
+graph TB
+    subgraph 用户层
+        A[Web 前端]
+        B[API 客户端]
+        C[测试工具]
+    end
+
+    subgraph API网关层
+        D[FastAPI 主入口]
+    end
+
+    subgraph 业务层
+        E[Chat API]
+        F[Knowledge API]
+        G[Feedback API]
+        H[Repair API]
+        I[Logistics API]
+        J[Graph API]
+    end
+
+    subgraph 核心服务层
+        K[Chat Service]
+        L[RAG Chain]
+        M[Classifier]
+        N[KG Service]
+        O[Repair Service]
+        P[Logistics Service]
+    end
+
+    subgraph 模型层
+        Q[LLM 模型]
+        R[Embeddings 模型]
+    end
+
+    subgraph 数据层
+        S[FAISS 向量库]
+        T[Neo4j 知识图谱]
+        U[MySQL 数据库]
+        V[Redis 缓存]
+        W[文档知识库]
+    end
+
+    A --> D
+    B --> D
+    C --> D
+
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    D --> I
+    D --> J
+
+    E --> K
+    K --> L
+    L --> M
+    L --> N
+    L --> O
+    L --> P
+
+    L --> Q
+    L --> R
+
+    R --> S
+    N --> T
+    O --> U
+    P --> U
+    K --> V
+    L --> S
+    F --> W
+    S --> W

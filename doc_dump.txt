@@ -1,0 +1,468 @@
+=== PARAGRAPHS ===
+   0 [Normal] 
+   1 [Normal] 本科毕业设计（论文）
+   2 [Normal] 
+   3 [Normal] 
+   4 [Normal] 
+   5 [Normal] 
+   6 [Normal] 
+   7 [Normal] 摘  要
+   8 [论文正文] 随着大语言模型（LLM）技术的快速发展，将其与检索增强生成（RAG）技术相结合为智能客服领域带来了新的解决方案。本文设计并实现了一套基于RAG技术的智能客服系统，以星辰科技S14系列手机为业务场景，构建了从知识库管理、意图识别、语义检索到大模型流式生成的完整客服流程。
+   9 [论文正文] 系统采用"本地规则分类+LLM生成分离"的核心架构，将意图分类从LLM中剥离，通过关键词规则实现零延迟分类，全流程仅调用一次LLM，有效降低了响应延迟和Token消耗。在检索策略上，系统创新性地融合了RAG非结构化文档检索、知识图谱结构化查询和SQLite实时数据库查询三种数据源，构建了多源异构的上下文增强方案。前后端采用Server-Sent Events（SSE）协议实现流式推送，用户感知的首字延迟约为0.5秒。
+  10 [论文正文] 系统后端基于FastAPI异步框架开发，向量检索采用FAISS本地部署，文本嵌入使用text2vec-base-chinese中文模型，LLM接口兼容OpenAI规范，可无缝对接DeepSeek、通义千问、GLM等多种大模型。前端采用原生HTML/CSS/JavaScript实现，无第三方框架依赖。测试结果表明，系统意图分类准确率达到95%以上，本地处理耗时不足50毫秒，整体响应质量和用户体验满足实际客服场景需求。
+  11 [Normal] 关键词：检索增强生成；智能客服；FAISS；知识图谱；大语言模型；Server-Sent Events
+  12 [Normal] 
+  13 [Normal] 	Abstract
+  14 [论文正文] With the rapid development of Large Language Model (LLM) technology, the combination of LLM and Retrieval-Augmented Generation (RAG) has brought new solutions to the field of intelligent customer service. This thesis designs and implements an intelligent customer service system based on RAG technology, using the Xinchen Technology S14 series smartphone as the business scenario, building a complete customer service pipeline from knowledge base management, intent classification, semantic retrieval to LLM streaming generation.
+  15 [论文正文] The system adopts a core architecture of "local rule classification + LLM generation separation", decoupling intent classification from the LLM through keyword rules to achieve zero-latency classification with only a single LLM invocation throughout the entire process, effectively reducing response latency and token consumption. The system innovatively integrates three data sources: RAG unstructured document retrieval, knowledge graph structured queries, and SQLite real-time database queries. The frontend and backend employ the Server-Sent Events (SSE) protocol for streaming, with a perceived first-token latency of approximately 0.5 seconds.
+  16 [论文正文] Keywords: Retrieval-Augmented Generation; Intelligent Customer Service; FAISS; Knowledge Graph; Large Language Model; Server-Sent Events
+  17 [论文正文] 
+  18 [论文正文] 
+  19 [Normal] 
+  20 [Normal] 
+  21 [Normal] 
+  22 [Heading 1] 1绪论
+  23 [Heading 2] 1.1 研究背景与意义
+  24 [Normal] 近年来，随着电子商务和移动互联网的高速发展，企业面临的客户咨询量呈爆发式增长。据统计，中国智能客服市场规模已突破百亿元，年均增长率超过20%。传统的人工客服模式面临着人力成本高昂、响应速度受限、服务时间有限等诸多挑战。因此，构建高效、准确的智能客服系统成为企业降本增效的迫切需求。
+  25 [Normal] 早期的智能客服系统主要基于关键词匹配和意图识别规则，回答的灵活性和自然度较低，用户体验不佳。随着2022年以来ChatGPT等大语言模型的兴起，基于LLM的对话系统展现了出色的自然语言理解和生成能力。然而，直接使用通用LLM作为客服存在明显不足：一是LLM的训练数据截止于某一时间点，无法获取企业的最新产品信息和售后政策；二是LLM存在"幻觉"问题，可能在不确定时编造虚假信息，这在客服场景中是不可接受的。
+  26 [Normal] 检索增强生成（Retrieval-Augmented Generation，RAG）技术为上述问题提供了有效的解决方案。RAG的核心思想是在LLM生成回答之前，先从企业私域知识库中检索与用户问题相关的文档片段，将这些片段作为上下文注入Prompt，使LLM基于真实资料生成回答。这种方式既保留了LLM优秀的语言生成能力，又确保了回答内容的准确性和时效性。
+  27 [Normal] 本文以星辰科技S14系列智能手机为业务场景，设计并实现了一套基于RAG技术的智能客服系统。系统涵盖产品问答、售后服务、电商查询、维修跟踪和物流追踪等典型客服场景，具备知识库管理、意图分类、语义检索、流式生成、反馈统计等完整功能。本研究不仅具有工程实践价值，也为RAG技术在垂直行业客服场景的落地提供了参考。
+  28 [Heading 2] 1.2 国内外研究现状
+  29 [Heading 3] 1.2.1 智能客服系统的发展
+  30 [Normal] 智能客服系统经历了从基于规则的对话系统到端到端神经网络模型，再到大模型驱动的智能体的发展历程。国内主流电商平台均已部署了各自的智能客服产品，如阿里巴巴的"阿里小蜜"、京东的"JIMI"等，这些系统结合了意图识别、知识图谱和对话管理等多种技术。国际上，微软、谷歌、亚马逊等科技公司也推出了各自的对话式AI平台。
+  31 [Heading 3] 1.2.2 RAG技术的研究进展
+  32 [Normal] RAG技术最早由Lewis等人于2020年在论文"Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks"中提出，其核心思想是将信息检索与文本生成相结合。随后，该技术在学术界和工业界得到了广泛关注和改进。LangChain、LlamaIndex等开源框架的出现降低了RAG应用的开发门槛。近年来的研究热点包括：检索策略优化（如混合检索、重排序）、上下文窗口管理、多模态RAG等方向。
+  33 [Heading 3] 1.2.3 知识图谱在客服领域的应用
+  34 [Normal] 知识图谱作为一种结构化的知识表示方式，在智能客服中具有独特优势。它能够精确表示产品规格、价格、库存等结构化信息，支持关系推理和属性查询。将知识图谱与RAG文档检索相结合，可以实现结构化与非结构化知识的互补，提升回答的准确性和完整性。
+  35 [Heading 2] 1.3 研究内容与目标
+  36 [Normal] 本文的主要研究内容包括：
+  37 [Normal] 设计并实现基于RAG的智能客服系统总体架构，重点解决意图分类效率和多源检索融合问题。
+  38 [Normal] 实现融合RAG文档检索、知识图谱查询和实时数据库查询的混合检索策略。
+  39 [Normal] 设计SSE流式传输协议和前端渲染方案，优化用户交互体验。
+  40 [Normal] 构建完整的系统功能模块，包括知识库管理、模型配置、反馈统计等。
+  41 [Normal] 对系统进行功能测试和性能测试，验证方案的可行性和有效性。
+  42 [Heading 2] 1.4 论文组织结构
+  43 [Normal] 本文共分为六章。第一章为绪论，阐述研究背景、国内外现状和研究内容；第二章介绍系统涉及的相关技术；第三章进行系统分析与设计；第四章详述系统的具体实现；第五章进行系统测试与分析；第六章总结全文并展望未来工作。
+  44 [Normal] 
+  45 [Heading 1] 2相关技术
+  46 [Heading 2] 2.1 检索增强生成（RAG）技术
+  47 [Normal] RAG（Retrieval-Augmented Generation）是一种将信息检索与文本生成相结合的技术范式。其核心流程分为三个阶段：
+  48 [Normal] 检索阶段（Retrieval）：将用户查询转化为向量表示，在预先构建的文档向量索引中进行语义相似度匹配，检索出与查询最相关的Top-K个文档片段。
+  49 [Normal] 增强阶段（Augmentation）：将检索到的文档片段按照预设的Prompt模板组织成上下文信息，与用户问题一起构建完整的LLM输入。
+  50 [Normal] 生成阶段（Generation）：LLM基于检索到的上下文信息和用户问题，生成准确、自然的回答。
+  51 [Normal] 相较于纯LLM生成，RAG的优势在于：知识可动态更新（修改文档即可）、回答有据可查（可追溯至源文档）、幻觉显著减少（LLM被限制在参考资料范围内回答）。
+  52 [Heading 2] 2.2 大语言模型（LLM）
+  53 [Normal] 大语言模型是基于Transformer架构、在海量文本数据上预训练的深度学习模型。本系统通过OpenAI兼容接口规范与LLM交互，这意味着系统可以无缝对接任何遵循该接口标准的模型服务商，包括DeepSeek、通义千问、智谱GLM、Groq、SiliconFlow等。
+  54 [Normal] 系统使用LangChain框架的ChatOpenAI类作为LLM调用层，支持同步调用和流式调用两种模式。流式调用通过逐Token返回的方式，显著降低了用户感知的等待时间。
+  55 [Heading 2] 2.3 FAISS向量数据库
+  56 [Normal] FAISS（Facebook AI Similarity Search）是Meta开源的高性能向量相似度检索库。本系统选择FAISS作为向量数据库，主要基于以下考虑：
+  57 [Normal] 本地部署：无需安装和维护外部数据库服务，部署零依赖。
+  58 [Normal] 高效检索：支持多种索引结构（Flat、IVF、HNSW等），可根据数据规模选择合适的索引类型。
+  59 [Normal] 持久化存储：支持将索引序列化到本地文件，服务重启后可快速加载。
+  60 [Normal] 本系统使用IndexFlatL2索引，采用精确的L2欧氏距离计算。由于FAISS返回的是L2距离而非余弦相似度，系统通过以下数学公式进行转换：
+  61 [Normal] cosine\_similarity = 1.0 - \frac{d_{L2}^{2}}{2.0}
+  62 [Normal] 该公式成立的前提是向量已经过归一化处理（即normalize_embeddings=True）。在归一化条件下，L2距离的平方与余弦相似度之间存在精确的数学关系：对于单位向量a和b，有 $||a-b||^2 = 2 - 2 \cdot cos(a,b)$，变换即得上式。
+  63 [Heading 2] 2.4 文本嵌入模型
+  64 [Normal] 本系统采用shibing624/text2vec-base-chinese作为文本嵌入模型。该模型是基于BERT架构针对中文语义相似度任务微调的模型，输出768维的稠密向量表示。模型在CPU环境下即可完成推理，无需GPU支持，适合轻量级部署场景。
+  65 [Normal] 嵌入过程中设置normalize_embeddings=True，确保所有输出向量为单位向量，这是上述L2到余弦相似度转换公式成立的必要条件。
+  66 [Heading 2] 2.5 知识图谱技术
+  67 [Normal] 知识图谱以"实体-关系-实体"的三元组形式存储结构化知识。本系统使用Python的NetworkX库构建有向图，节点表示产品、规格、价格、库存等实体，边表示实体间的关系（如HAS_SPEC、HAS_SKU、COVERED_BY等）。
+  68 [Normal] 知识图谱的优势在于精确的属性查询和关系推理能力。例如查询"S14的处理器是什么"，知识图谱可以直接通过图遍历获得精确答案，而不依赖语义相似度匹配。这种能力与RAG的模糊语义检索形成良好互补。
+  69 [Heading 2] 2.6 Web开发技术栈
+  70 [Heading 3] 2.6.1 FastAPI异步框架
+  71 [Normal] FastAPI是一个现代的Python Web框架，基于ASGI（异步服务器网关接口）标准，原生支持异步编程。本系统选择FastAPI的主要原因包括：原生支持SSE流式响应、自动生成API文档、基于Pydantic的请求验证、优秀的性能表现。
+  72 [Heading 3] 2.6.2 Server-Sent Events流式通信
+  73 [Normal] SSE（Server-Sent Events）是一种服务器向客户端单向推送数据的HTTP协议。相较于WebSocket的全双工通信，SSE具有以下优势：协议更简单、基于标准HTTP、自动重连机制、天然适合服务器推送场景。
+  74 [Normal] 在智能客服场景中，LLM生成回答是典型的服务器到客户端的单向数据流，SSE是最合适的通信方案。
+  75 [Heading 2] 2.7 本章小结
+  76 [Normal] 本章介绍了系统开发所涉及的核心技术，包括RAG检索增强生成、大语言模型、FAISS向量数据库、文本嵌入模型、知识图谱以及Web开发技术栈。这些技术为后续系统的设计与实现奠定了理论基础。
+  77 [Normal] 
+  78 [Heading 1] 3系统分析与设计
+  79 [Heading 2] 3.1 需求分析
+  80 [Heading 3] 3.1.1 功能需求分析
+  81 [Normal] 通过对智能手机客服业务场景的调研分析，本系统需要满足以下功能需求：
+  82 [Normal] 智能问答：用户输入自然语言问题，系统自动分类意图、检索知识库、生成准确回答。
+  83 [Normal] 知识库管理：支持上传TXT、PDF、DOCX格式文档，自动切分并向量化建立索引。
+  84 [Normal] 多意图支持：覆盖产品问答、售后服务、电商查询、维修跟踪、物流追踪等六类意图。
+  85 [Normal] 流式输出：回答以逐字形式实时推送，提供类似真人打字的交互体验。
+  86 [Normal] 模型配置：支持运行时切换LLM服务商和模型，无需重启服务。
+  87 [Normal] 反馈统计：支持用户评分，提供满意率、平均评分等统计指标。
+  88 [Normal] 电商数据查询：实时查询商品价格、库存、物流状态等动态数据。
+  89 [Heading 3] 3.1.2 非功能需求分析
+  90 [Normal] 性能需求：首字响应延迟不超过2秒，意图分类耗时不超过1毫秒。
+  91 [Normal] 兼容性需求：支持对接任意兼容OpenAI接口的LLM服务商。
+  92 [Normal] 部署需求：零外部依赖，单机即可部署运行，无需安装数据库服务。
+  93 [Normal] 安全需求：防范XSS注入风险，用户输入不应被作为HTML执行。
+  94 [Heading 2] 3.2 系统总体架构设计
+  95 [Heading 3] 3.2.1 架构概述
+  96 [Normal] 系统采用前后端一体的B/S架构，整体分为前端展示层、API接口层、业务服务层和数据存储层四个层次。
+  97 [Normal] 前端展示层：基于原生HTML/CSS/JavaScript实现的单页应用，通过SSE协议与后端通信，负责用户交互和结果展示。
+  98 [Normal] API接口层：基于FastAPI框架，定义了问答、知识库、配置、反馈、电商数据等REST API端点。
+  99 [Normal] 业务服务层：包含RAG核心流程、意图分类器、向量检索、知识图谱查询、数据库服务等核心业务逻辑。
+ 100 [Normal] 数据存储层：包含FAISS向量索引、知识图谱序列化文件、SQLite电商数据库和内存缓存。
+ 101 [Heading 3] 3.2.2 核心设计决策：分类与生成分离
+ 102 [Normal] 本系统最关键的架构决策是将意图分类与LLM生成完全分离。最初的设计方案是使用LLM进行意图识别，再使用LLM生成回答，这将导致两次LLM API调用，延迟翻倍、Token消耗翻倍。
+ 103 [Normal] 经过分析发现，客服场景的意图类别有限（6类），且每类意图都有明确的关键词特征。因此，系统采用本地关键词规则进行意图分类，耗时不到1毫秒，全流程仅需调用一次LLM用于最终的回答生成。
+ 104 [Normal] 系统的核心处理流程如下：
+ 105 [Normal] 用户提问
+  ↓
+本地关键词分类（< 1ms，不调用 LLM）
+  ↓
+并行处理：FAISS 向量检索 + 知识图谱查询 + 服务数据查询
+  ↓
+上下文组装（结构化知识 → 实时数据 → RAG 参考资料）
+  ↓
+按分类选择对应 Prompt 模板
+  ↓
+LLM 流式生成（全流程仅此一次调用）
+  ↓
+SSE 逐字推送到前端
+ 106 [Heading 2] 3.3 模块设计
+ 107 [Heading 3] 3.3.1 知识库管理模块
+ 108 [Normal] 知识库管理模块负责文档的上传、解析、切分和向量化索引。支持TXT、PDF、DOCX三种文档格式，使用RecursiveCharacterTextSplitter进行文本切分，参数设置为每块500字、重叠50字，分隔符针对中文进行优化（按段落、句号、问号等分割）。
+ 109 [Heading 3] 3.3.2 意图分类模块
+ 110 [Normal] 意图分类模块基于关键词规则实现，定义了六类意图及其对应的关键词列表。分类算法遍历所有意图类别，统计用户问题中命中的关键词数量，选择得分最高的类别作为分类结果。若未命中任何关键词，则归入"其他"类别。
+ 111 [Heading 3] 3.3.3 RAG检索与生成模块
+ 112 [Normal] RAG模块是系统的核心，负责整个问答流程的编排。模块接收用户问题后，依次执行意图分类、知识图谱查询、向量检索，然后按优先级组装上下文（结构化知识 > 实时服务数据 > RAG参考资料），选择对应的Prompt模板，最后调用LLM进行流式生成。
+ 113 [Heading 3] 3.3.4 知识图谱模块
+ 114 [Normal] 知识图谱模块使用NetworkX有向图存储产品的结构化知识，包括产品规格、SKU价格、库存状态、保修政策、维修费用、配件信息和常见故障等节点类型。模块提供了8个专用查询函数，如query_product_price()、query_stock()、query_spec_comparison()等。
+ 115 [Heading 3] 3.3.5 电商数据库与缓存模块
+ 116 [Normal] 电商数据库模块使用SQLite存储商品、物流和促销数据，搭配内存缓存层（TTL=5分钟）提升查询性能。缓存策略为"先查缓存→未命中查数据库→回填缓存"，写操作自动清除相关缓存，保证数据一致性。
+ 117 [Heading 3] 3.3.6 维修工单与物流跟踪模块
+ 118 [Normal] 维修和物流模块分别管理维修工单和物流订单的创建、查询和状态更新。这两个模块使用内存存储（适用于演示场景），支持通过工单号或订单号进行精确查询。
+ 119 [Heading 3] 3.3.7 SSE流式输出模块
+ 120 [Normal] SSE模块定义了三事件协议：meta事件立即推送分类结果和参考来源；token事件逐字推送LLM生成的文本；done事件推送完整回答用于最终渲染。该设计使用户在LLM处理第一个Token时即可看到响应，显著降低了感知延迟。
+ 121 [Heading 3] 3.3.8 反馈与统计模块
+ 122 [Normal] 反馈模块支持用户对每次会话进行1-5星评分，后端实时统计总反馈数、平均评分和满意率（4星及以上）等指标。
+ 123 [Heading 2] 3.4 数据库设计
+ 124 [Heading 3] 3.4.1 SQLite电商数据库
+ 125 [Normal] 电商数据库包含三张表：
+ 126 [Normal] product表：存储商品信息，字段包括sku_id（主键）、product_name（商品名称）、current_price（官方价格）、promo_price（促销价格）、stock_num（库存数量）、specs（JSON格式规格参数）、is_on_sale（在售标志）。
+ 127 [Normal] logistics表：存储物流信息，字段包括order_id（订单号主键）、sku_id（商品ID）、carrier（承运商）、status（物流状态）、address（收货地址）、created_at（创建时间）。
+ 128 [Normal] promotion表：存储促销信息，字段包括promo_id（自增主键）、sku_id（商品ID）、description（促销描述）、discount_rate（折扣率）、start_date和end_date（有效期）。
+ 129 [Heading 3] 3.4.2 FAISS向量索引
+ 130 [Normal] 向量索引以两个文件形式持久化存储：index.faiss存储向量数据和索引结构，index.pkl存储文档元数据（原始文本、来源文件名等）。系统启动时自动加载已有索引，支持增量添加和全量清空操作。
+ 131 [Heading 3] 3.4.3 知识图谱存储
+ 132 [Normal] 知识图谱以NetworkX有向图对象的形式序列化为graph.pkl文件。图中包含产品、规格、SKU、库存、保修、配件、故障、维修项等8种节点类型，以及HAS_SPEC、HAS_SKU、HAS_COLOR、COVERED_BY等多种关系类型。
+ 133 [Normal] 3.5 接口设计
+ 134 [Normal] 系统共设计了17个REST API端点，按功能分组如下：
+ 135 [表注] 表 3-1 系统API接口清单
+ 136 [Normal] 
+ 137 [Heading 2] 3.6 本章小结
+ 138 [Normal] 本章从需求分析出发，完成了系统的总体架构设计、模块设计、数据库设计和接口设计。系统最核心的设计决策是将意图分类与LLM生成分离，以及融合RAG、知识图谱和实时数据库的混合检索策略。这些设计决策在保证系统功能完整性的同时，有效控制了延迟和成本。
+ 139 [Normal] 
+ 140 [Heading 1] 4系统实现
+ 141 [Heading 2] 4.1 开发环境与工具
+ 142 [表注] 表 4-1 开发环境配置
+ 143 [Normal] 
+ 144 [Heading 2] 4.2 知识库管理实现
+ 145 [Heading 3] 4.2.1 多格式文档加载
+ 146 [Normal] 系统通过app/knowledge/loader.py实现了三种文档格式的加载。TXT文件直接以UTF-8编码读取文本内容；PDF文件使用PyPDF库逐页提取文本；DOCX文件使用python-docx库遍历段落提取内容。三种格式统一输出为纯文本字符串，交由后续切分模块处理。
+ 147 [Heading 3] 4.2.2 文本切分策略
+ 148 [Normal] 文本切分采用LangChain的RecursiveCharacterTextSplitter，配置如下：
+ 149 [Normal] RecursiveCharacterTextSplitter(
+    chunk_size=500,
+    chunk_overlap=50,
+    separators=["\n\n", "\n", "。", "！", "？", ".", " ", ""]
+)
+ 150 [Normal] 切分策略的核心思想是递归尝试不同的分隔符：优先按段落分割，段落过长则按句号分割，依次递归直到满足块大小限制。50字的重叠保证了上下文的连贯性，避免在切分边界处丢失语义信息。分隔符列表针对中文进行了优化，包含中文句号、感叹号和问号。
+ 151 [Heading 3] 4.2.3 向量化与索引构建
+ 152 [Normal] 文档切分后的文本块通过text2vec-base-chinese模型转化为768维向量，写入FAISS索引并持久化到本地文件。系统支持增量添加文档和全量清空重建两种操作。
+ 153 [Heading 2] 4.3 意图分类器实现
+ 154 [Normal] 意图分类器定义在app/core/classifier.py中，采用基于关键词计分的规则方法。系统预定义了六类意图及其关键词表：
+ 155 [Normal] _RULES = {
+    "repair_track": ["维修进度", "工单", "修好了吗", "维修状态", ...],
+    "logistics_track": ["物流查询", "到哪了", "快递单号", ...],
+    "after_sales": ["退货", "换货", "退款", "保修", "故障", ...],
+    "ecommerce": ["价格", "多少钱", "优惠", "库存", ...],
+    "product_qa": ["怎么用", "如何使用", "功能", "设置", ...],
+}
+ 156 [Normal] 分类算法遍历每个类别的关键词列表，统计用户问题中出现的关键词数量作为该类别的得分，返回得分最高的类别。若所有类别得分为零，则返回"other"。整个分类过程是纯字符串匹配操作，耗时不到1毫秒，不涉及任何网络请求或模型推理。
+ 157 [Heading 2] 4.4 RAG核心流程实现
+ 158 [Heading 3] 4.4.1 混合检索策略
+ 159 [Normal] RAG核心流程实现在app/core/rag_chain.py的_build_prompt_and_sources()函数中。该函数按以下步骤执行：
+ 160 [Normal] 调用意图分类器确定问题类别。
+ 161 [Normal] 调用知识图谱服务获取结构化知识（如产品规格、价格等）。
+ 162 [Normal] 对于维修/物流跟踪类问题，额外从对应服务获取实时数据。
+ 163 [Normal] 调用FAISS向量检索获取Top-K相关文档片段。
+ 164 [Normal] 按优先级组装上下文：结构化知识 → 实时服务数据 → RAG参考资料。
+ 165 [Normal] 选择对应意图的Prompt模板，填充上下文和用户问题。
+ 166 [Normal] 这种多源融合的检索策略确保了系统能够综合利用非结构化文档（RAG）、结构化知识（知识图谱）和实时数据（数据库）三类数据源，提供全面准确的回答。
+ 167 [Heading 3] 4.4.2 Prompt模板设计
+ 168 [Normal] 系统为六类意图分别设计了Prompt模板，所有模板遵循统一的设计原则：
+ 169 [Normal] 人设先行：模板首句定义角色（"你是星辰科技的官方客服'小星'"），确保LLM输出的语气一致。
+ 170 [Normal] 规则显式：将"不编造信息"、"口语化回答"等要求显式写入模板，而非依赖LLM的默认行为。
+ 171 [Normal] 上下文注入：参考资料、对话历史、用户问题按固定顺序注入，确保LLM正确理解上下文层次。
+ 172 [Normal] 尾部格式指令：以"回答（请用自然口语化的方式回答，不要直接复制参考资料）："结尾，引导LLM生成高质量回答。
+ 173 [Normal] 以产品问答模板为例，除通用规则外，还包含"分步骤说明操作方法"、"直接给出结论再解释原因"等针对性指令，引导LLM输出结构清晰的操作指南。
+ 174 [Heading 3] 4.4.3 流式生成器实现
+ 175 [Normal] 流式问答通过Python生成器函数rag_query_stream()实现：
+ 176 [Normal] def rag_query_stream(question, chat_history) -> Generator:
+    category, sources, prompt, kg_used = _build_prompt_and_sources(
+        question, chat_history
+    )
+    similar_questions = search_faq(question, top_k=3)
+
+    yield {"type": "meta", "category": category, "sources": sources,
+           "similar_questions": similar_questions, "kg_used": kg_used}
+
+    llm = get_llm()
+    full_answer = ""
+    for chunk in llm.stream(prompt):
+        token = chunk.content
+        if token:
+            full_answer += token
+            yield {"type": "token", "content": token}
+
+    yield {"type": "done", "answer": full_answer}
+ 177 [Normal] 该生成器首先yield一个meta事件，携带分类结果、参考来源和相似问题推荐；然后逐个yieldtoken事件；最后yield一个done事件携带完整回答。
+ 178 [Heading 2] 4.5 知识图谱构建与查询
+ 179 [Heading 3] 4.5.1 图谱数据建模
+ 180 [Normal] 知识图谱通过app/scripts/build_graph.py脚本构建，使用NetworkX有向图存储。图中定义了以下核心实体和关系：
+ 181 [Normal] 产品节点：星辰S14、星辰S14 Pro，关联规格、SKU、配件等信息。
+ 182 [Normal] SKU节点：6个版本（8+256GB至Pro 16+1TB），包含官方价、促销价属性。
+ 183 [Normal] 规格节点：处理器、屏幕、电池、摄像头等类别，记录具体参数值。
+ 184 [Normal] 库存节点：按SKU+颜色组合记录库存状态。
+ 185 [Normal] 保修节点：整机保修、电池保修等政策，记录时限和条件。
+ 186 [Normal] 故障节点：常见故障类型，关联对应的维修项和费用。
+ 187 [Normal] 
+ 188 [Normal] 
+ 189 [图注] 图4-1 知识图谱实体关系图
+ 190 [Heading 3] 4.5.2 结构化查询路由
+ 191 [Normal] 知识图谱查询通过app/services/kg_service.py的kg_query()函数路由。该函数根据意图分类和问题中的关键词，将查询请求分发到8个专用查询函数：
+ 192 [Normal] 电商类问题路由到query_product_price()或query_stock()。
+ 193 [Normal] 售后类问题路由到query_warranty()或query_repair_cost()。
+ 194 [Normal] 产品问答路由到query_product_specs()或query_spec_comparison()。
+ 195 [Normal] 以价格查询为例，query_product_price()函数采用双重回退策略：优先从SQLite数据库获取实时价格数据，数据库不可用时自动回退到知识图谱中的静态价格信息，确保系统始终有响应。
+ 196 [Heading 2] 4.6 电商数据库与缓存层实现
+ 197 [Normal] 电商数据库服务实现在app/services/db_service.py中。核心设计包括：
+ 198 [Normal] 内存缓存层：使用Python字典模拟Redis，每个缓存条目包含JSON序列化的值和过期时间戳（TTL=5分钟）。缓存键按"类型:ID"格式命名，如product:1001、stock:1002。
+ 199 [Normal] 查询优先级：所有查询函数遵循统一的缓存穿透策略：先查内存缓存，未命中则查SQLite数据库，查到后回填缓存。写操作会自动清除相关缓存，保证数据一致性。
+ 200 [Normal] 线程安全：缓存操作通过threading.Lock保证线程安全，避免在FastAPI的异步并发环境中出现竞态条件。
+ 201 [Heading 2] 4.7 SSE流式输出实现
+ 202 [Heading 3] 4.7.1 后端流式端点
+ 203 [Normal] 后端SSE端点通过FastAPI的StreamingResponse实现：
+ 204 [Normal] @router.post("/stream")
+async def stream_question(req: ChatRequest):
+    def generate():
+        for event in rag_query_stream(req.question, chat_history):
+            yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+    return StreamingResponse(generate(), media_type="text/event-stream")
+ 205 [Heading 3] 4.7.2 三事件协议设计
+ 206 [Normal] 系统定义了三种SSE事件类型：
+ 207 [Normal] meta事件：在RAG检索完成后立即发送，包含意图分类结果、参考来源列表、相似问题推荐和是否使用了知识图谱等元数据。前端收到此事件后立即创建对话气泡。
+ 208 [Normal] token事件：LLM每生成一个Token即发送一次，前端逐字追加到气泡中，实现打字机效果。
+ 209 [Normal] done事件：LLM生成完毕后发送，包含完整的回答文本。前端收到此事件后将气泡内容替换为Markdown渲染后的HTML。
+ 210 [Heading 3] 4.7.3 前端流式消费
+ 211 [Normal] 前端使用Fetch API的ReadableStream消费SSE流：
+ 212 [Normal] const reader = res.body.getReader();
+// 循环读取流数据，按 \n\n 分割事件
+// meta  → 创建气泡DOM，显示分类标签
+// token → rawAnswer += token; answerEl.textContent = rawAnswer
+// done  → answerEl.innerHTML = marked.parse(rawAnswer)
+ 213 [Normal] 关键的安全设计：流式阶段使用textContent属性追加文本（不解析HTML，防止XSS），完成后使用marked.parse()进行Markdown渲染（marked库会过滤危险标签）。
+ 214 [Heading 2] 4.8 LLM运行时热配置
+ 215 [Normal] LLM管理采用单例模式，通过app/models/llm.py实现。当用户通过前端修改API Key、Base URL或模型名称时，update_llm_config()函数更新配置并将单例置为None，下次调用get_llm()时使用新配置重建LLM实例，实现无需重启服务的热更新。
+ 216 [Normal] 系统还提供了连接测试功能，通过向LLM发送一条测试消息，返回响应时间、Token消耗等指标，帮助用户快速验证配置是否正确。
+ 217 [Heading 2] 4.9 前端界面实现
+ 218 [Normal] 前端采用单文件HTML实现，共约1200行代码，无任何第三方框架依赖。界面布局分为左侧导航栏和右侧主区域，导航栏提供Tab切换功能，包括模型配置、知识库管理、会话评价、演示数据和聊天界面五个面板。
+ 219 [Normal] 前端设计采用现代化的CSS变量系统，定义了完整的颜色、间距和字体设计令牌。聊天界面实现了用户消息（右侧蓝色气泡）和助手消息（左侧灰色气泡）的对话样式，每条助手回答底部提供可展开的参考来源折叠区。
+ 220 [图注] 
+ 221 [图注] 图4-4 系统前端界面
+ 222 [Normal] 知识图谱可视化使用vis-network库实现，以力导向图的形式展示实体和关系：
+ 223 [Normal] 
+ 224 [图注] 图4-5 知识图谱可视化界面
+ 225 [Heading 2] 4.10 本章小结
+ 226 [Normal] 本章详细阐述了系统各模块的具体实现，包括知识库管理、意图分类器、RAG核心流程、知识图谱构建与查询、电商数据库与缓存层、SSE流式输出、LLM热配置和前端界面。系统通过多源融合检索、分类生成分离和流式推送等关键技术实现了高效准确的智能客服功能。
+ 227 [Normal] 
+ 228 [Heading 1] 5系统测试
+ 229 [Heading 2] 5.1 测试环境
+ 230 [表注] 表 5-1 测试环境配置
+ 231 [Normal] 
+ 232 [Heading 2] 5.2 意图分类准确性测试
+ 233 [Normal] 为验证意图分类器的准确性，设计了60条测试用例，覆盖6类意图（每类10条），包括典型问法和边缘案例。测试结果如下：
+ 234 [表注] 表 5-2 意图分类测试结果
+ 235 [Normal] 
+ 236 [图注] 图5-1 意图分类准确性测试结果图
+ 237 [Normal] 测试分析：分类器在明确包含关键词的问题上表现优异。少量误分类案例出现在表述模糊的边缘问题上，例如"手机出了问题怎么办"可能被分类为"售后"而非"产品问答"。对于实际客服场景，95%的准确率能够满足需求，且关键词表可根据实际运营数据持续优化。
+ 238 [Heading 2] 5.3 端到端问答测试
+ 239 [Normal] 选取15个覆盖不同意图的代表性问题进行端到端测试，记录系统的分类结果、知识图谱命中情况、检索文档数、首字延迟和总耗时。
+ 240 [表注] 表 5-3 端到端问答测试结果
+ 241 [Normal] 
+ 242 [Normal] 测试结果显示，所有测试问题的意图分类均正确，首字延迟平均约500毫秒，用户体验良好。涉及价格、规格等结构化数据的问题成功命中知识图谱，获得了精确的数据支撑。
+ 243 [Heading 2] 5.4 性能测试
+ 244 [Heading 3] 5.4.1 各模块耗时分布
+ 245 [Normal] 对系统各处理模块进行耗时统计，结果如下：
+ 246 [表注] 表 5-4 各模块平均耗时
+ 247 [Normal] 
+ 248 [图注] 图5-2 各模块耗时分布图
+ 249 [Normal] 性能分析：本地处理模块（分类、检索、组装）总耗时约30毫秒，占整体耗时不到2%。系统延迟的绝对主体来自LLM的网络调用和生成过程。这验证了"分类与生成分离"设计决策的正确性——将意图分类从LLM中剥离不仅消除了一次LLM调用的延迟，也使本地处理的效率达到了极致。
+ 250 [Heading 3] 5.4.2 首字延迟优化分析
+ 251 [Normal] 通过SSE流式推送，用户看到第一个字的时间（首字延迟）约为500毫秒，相较于等待完整回答（平均约1800毫秒）减少了约72%。这种优化对用户体验的提升是显著的：用户不需要面对空白等待，而是看到回答逐字出现，体验接近与真人客服实时对话。
+ 252 [Heading 2] 5.5 功能测试
+ 253 [Heading 3] 5.5.1 知识库管理功能测试
+ 254 [表注] 表 5-5 知识库管理功能测试用例
+ 255 [Normal] 
+ 256 [Heading 3] 5.5.2 多意图问答测试
+ 257 [Normal] 针对每类意图设计了典型的问答测试场景：
+ 258 [Normal] 产品问答：询问"怎么重启手机"，系统正确分类为product_qa，检索到产品说明文档中的操作步骤，生成分步骤指南。
+ 259 [Normal] 售后服务：询问"屏幕碎了能保修吗"，系统分类为after_sales，同时从知识图谱获取保修政策，从RAG获取售后流程说明。
+ 260 [Normal] 电商查询：询问"S14 Pro 16+512多少钱"，系统分类为ecommerce，从SQLite数据库获取实时价格¥5,999和促销价¥5,599。
+ 261 [Normal] 维修跟踪：查询具体工单号，系统从维修服务获取工单状态并结合售后政策生成回答。
+ 262 [Normal] 物流追踪：查询订单物流，系统从物流服务获取配送状态并告知预计到达时间。
+ 263 [Heading 3] 5.5.3 知识图谱查询测试
+ 264 [Normal] 测试了知识图谱的多种查询功能：
+ 265 [Heading 2] 5.6 测试结论
+ 266 [Normal] 通过意图分类测试、端到端问答测试、性能测试和功能测试，系统各项指标达到了设计要求：
+ 267 [Normal] 意图分类准确率95%，满足实际客服场景需求。
+ 268 [Normal] 本地处理耗时不足50毫秒，LLM是性能瓶颈而非系统自身。
+ 269 [Normal] SSE流式推送使首字延迟降至约500毫秒，用户体验良好。
+ 270 [Normal] 知识库管理、多意图问答、知识图谱查询等功能运行正常。
+ 271 [Normal] 多源融合检索策略有效提升了回答的准确性和完整性。
+ 272 [Heading 2] 5.7 本章小结
+ 273 [Normal] 本章从意图分类准确性、端到端问答质量、系统性能和功能完整性四个维度对系统进行了全面测试。测试结果表明，系统的核心设计决策（分类与生成分离、多源融合检索、SSE流式推送）均取得了预期效果，系统整体满足智能客服场景的实际需求。
+ 274 [Normal] 
+ 275 [Heading 1] 6总结与展望
+ 276 [Heading 2] 6.1 工作总结
+ 277 [Normal] 本文设计并实现了一套基于RAG技术的智能客服系统，主要完成了以下工作：
+ 278 [Normal] 设计了"本地规则分类+LLM生成分离"的系统架构，实现了全流程仅一次LLM调用的高效问答流程。
+ 279 [Normal] 实现了融合RAG非结构化文档检索、知识图谱结构化查询和SQLite实时数据库查询的混合检索策略。
+ 280 [Normal] 设计了基于SSE的三事件流式传输协议，首字延迟约500毫秒，显著提升了用户交互体验。
+ 281 [Normal] 构建了完整的系统功能模块，包括知识库管理、多意图分类、运行时模型热配置、反馈统计等。
+ 282 [Normal] 实现了零外部依赖的部署方案，FAISS向量库、SQLite数据库和嵌入模型均在本地运行。
+ 283 [Heading 2] 6.2 创新点总结
+ 284 [Normal] 分类与生成分离：通过本地关键词规则实现零延迟意图分类，避免了"用LLM做分类再用LLM做生成"导致的两次调用问题，Token消耗减半。
+ 285 [Normal] 多源异构检索融合：创新性地将RAG、知识图谱和实时数据库三种数据源按优先级融合，兼顾了回答的全面性、准确性和时效性。
+ 286 [Normal] 正确的相似度转换：推导并应用了归一化向量下L2距离到余弦相似度的精确转换公式，避免了常见的近似误差。
+ 287 [Normal] SSE三事件协议：设计了meta/token/done三阶段流式协议，首字延迟相比等待完整回答降低约72%。
+ 288 [Normal] 运行时热配置：通过单例失效与重建机制，实现了LLM服务商的运行时无缝切换。
+ 289 [Heading 2] 6.3 不足与改进方向
+ 290 [Normal] 意图分类：当前基于关键词规则的分类方法在语义泛化上有局限，未来可引入轻量级分类模型（如FastText或小型BERT）提升对模糊表述的识别能力。
+ 291 [Normal] 检索精度：系统未引入重排序（Reranker）机制，Top-K结果直接用于上下文构建。引入Reranker可在粗检索Top-20后精排取Top-3，显著提升检索质量。
+ 292 [Normal] 多轮对话：当前系统虽然保存了对话历史，但缺乏显式的多轮推理能力，对于需要多轮交互才能明确意图的场景处理较弱。
+ 293 [Normal] 缓存方案：内存缓存仅适用于单机部署，在分布式场景下需要替换为Redis等专业缓存中间件。
+ 294 [Normal] 评估体系：缺乏系统化的RAG评估指标（如Faithfulness、Answer Relevance），后续可引入RAGAS等评估框架进行量化评估。
+ 295 [Heading 2] 6.4 展望
+ 296 [Normal] 随着大语言模型技术的持续演进，RAG技术也在快速发展。未来的改进方向包括：引入多模态RAG支持图片和视频内容检索；通过Docker容器化实现一键部署；支持多知识库切换满足多业务线需求；接入语音交互通道，拓展服务形态。本系统的模块化架构为上述扩展预留了良好的接口，具备进一步发展的潜力。
+ 297 [Normal] 
+ 298 [Heading 1] 致谢
+ 299 [Normal] 时光荏苒，四年的本科生活即将画上句号。在毕业设计的完成过程中，我要衷心感谢我的指导老师，感谢老师在选题确定、方案设计和论文撰写过程中给予的悉心指导和宝贵意见。
+ 300 [Normal] 感谢同窗好友们在学习和生活中的陪伴与支持，大家在技术讨论中的思想碰撞让我受益良多。
+ 301 [Normal] 感谢开源社区的贡献者们，LangChain、FAISS、FastAPI等优秀开源项目为本系统的开发提供了坚实的技术基础。
+ 302 [Normal] 最后，感谢我的家人，你们的理解和支持是我求学路上最坚定的后盾。
+ 303 [Normal] 在本次毕业设计中，我不仅加深了对RAG技术和大语言模型的理解，也积累了从系统设计到工程实现的完整经验。这段经历将成为我未来技术成长道路上的宝贵财富。
+ 304 [Normal] 
+ 305 [Heading 1] 参考文献
+ 306 [论文正文] [1] Lewis P, Perez E, Piktus A, et al. Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks[C]. Advances in Neural Information Processing Systems, 2020, 33: 9459-9474.
+ 307 [论文正文] [2] Vaswani A, Shazeer N, Parmar N, et al. Attention Is All You Need[C]. Advances in Neural Information Processing Systems, 2017, 30.
+ 308 [论文正文] [3] Devlin J, Chang M W, Lee K, et al. BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding[C]. NAACL-HLT, 2019: 4171-4186.
+ 309 [论文正文] [4] Johnson J, Douze M, Jégou H. Billion-scale Similarity Search with GPUs[J]. IEEE Transactions on Big Data, 2021, 7(3): 535-547.
+ 310 [论文正文] [5] Gao Y, Xiong Y, Luan L, et al. Retrieval-Augmented Generation for Large Language Models: A Survey[J]. arXiv preprint arXiv:2312.10997, 2023.
+ 311 [论文正文] [6] 刘峤, 李杨, 段宏, 等. 知识图谱构建技术综述[J]. 计算机研究与发展, 2016, 53(3): 582-600.
+ 312 [论文正文] [7] Karpukhin V, Oguz B, Min S, et al. Dense Passage Retrieval for Open-Domain Question Answering[C]. EMNLP, 2020: 6769-6781.
+ 313 [论文正文] [8] 李航. 统计学习方法[M]. 第2版. 北京: 清华大学出版社, 2019.
+ 314 [论文正文] [9] Borgeaud S, Mensch A, Hoffmann J, et al. Improving Language Models by Retrieving from Trillions of Tokens[C]. ICML, 2022: 2206-2240.
+ 315 [论文正文] [10] Ram O, Levine Y, Dalmedigos I, et al. In-Context Retrieval-Augmented Language Models[J]. Transactions of the Association for Computational Linguistics, 2023, 11: 1316-1331.
+ 316 [论文正文] [11] Petroni F, Rocktäschel T, Riedel S, et al. Language Models as Knowledge Bases?[C]. EMNLP-IJCNLP, 2019: 2463-2473.
+ 317 [论文正文] [12] 黄河燕, 冯冲, 陈亮, 等. 面向智能客服的人机对话关键技术研究综述[J]. 中文信息学报, 2021, 35(10): 1-18.
+ 318 [论文正文] [13] Shi B, Abacha A B, Zhong P, et al. Replug: Retrieval-Augmented Black-Box Language Models[C]. NAACL, 2024: 8371-8384.
+ 319 [论文正文] [14] Izacard G, Grave E. Leveraging Passage Retrieval with Generative Models for Open Domain Question Answering[C]. EACL, 2021: 874-880.
+ 320 [论文正文] [15] 苏剑林. 让研究人员绝望的Embedding Quantization[J/OL]. 科学空间, 2024.
+ 321 [List Paragraph] 
+
+=== TABLES ===
+-- Table 0 (rows=2, cols=2) --
+  row0: ['题目', '基于RAG技术的智能客服系统']
+  row1: ['的设计与实现', '的设计与实现']
+-- Table 1 (rows=7, cols=4) --
+  row0: ['学生姓名', '', '学\u3000号', '']
+  row1: ['教学院系', '', '', '']
+  row2: ['专业年级', '', '', '']
+  row3: ['指导教师', '', '职\u3000称', '']
+  row4: ['单\u3000\u3000位', '西南石油大学', '西南石油大学', '西南石油大学']
+  row5: ['辅导教师', '', '职  称', '']
+  row6: ['单\u3000\u3000位', '', '', '']
+-- Table 2 (rows=1, cols=7) --
+  row0: ['完成日期', '', '年', '', '月', '', '日']
+-- Table 3 (rows=18, cols=3) --
+  row0: ['方法', '路径', '说明']
+  row1: ['POST', '/api/chat/stream', '流式问答（SSE）']
+  row2: ['POST', '/api/knowledge/upload', '上传文档到知识库']
+  row3: ['DELETE', '/api/knowledge/clear', '清空知识库']
+  row4: ['GET', '/api/knowledge/status', '知识库状态']
+  row5: ['POST', '/api/feedback/submit', '提交评分']
+  row6: ['GET', '/api/feedback/stats', '获取统计数据']
+  row7: ['GET', '/api/config/current', '获取当前模型配置']
+  row8: ['POST', '/api/config/save', '保存新配置']
+  row9: ['POST', '/api/config/test', '测试LLM连接']
+  row10: ['GET', '/api/db/products', '商品列表']
+  row11: ['GET', '/api/db/product/{sku_id}', '商品详情']
+  row12: ['GET', '/api/db/stock/{sku_id}', '库存状态']
+  row13: ['GET', '/api/db/logistics/{order_id}', '物流查询']
+  row14: ['POST', '/api/db/logistics', '创建物流订单']
+  row15: ['POST', '/api/repair/create', '创建维修工单']
+  row16: ['GET', '/api/repair/{ticket_id}', '工单详情']
+  row17: ['POST', '/api/demo/init', '初始化演示数据']
+-- Table 4 (rows=10, cols=2) --
+  row0: ['项目', '说明']
+  row1: ['操作系统', 'Windows 11']
+  row2: ['编程语言', 'Python 3.10+']
+  row3: ['Web框架', 'FastAPI 0.115.5 + Uvicorn 0.32.1']
+  row4: ['LLM框架', 'LangChain 0.3.7 + langchain-openai 0.2.14']
+  row5: ['向量数据库', 'faiss-cpu 1.9.0']
+  row6: ['嵌入模型', 'shibing624/text2vec-base-chinese']
+  row7: ['知识图谱', 'NetworkX 3.2+']
+  row8: ['数据库', 'SQLite（内置）']
+  row9: ['前端', 'HTML5 / CSS3 / JavaScript（原生）']
+-- Table 5 (rows=7, cols=2) --
+  row0: ['项目', '说明']
+  row1: ['操作系统', 'Windows 11']
+  row2: ['处理器', 'Intel Core i5']
+  row3: ['内存', '16 GB']
+  row4: ['Python版本', '3.10']
+  row5: ['LLM服务', 'DeepSeek-Chat']
+  row6: ['运行方式', 'uvicorn本地部署']
+-- Table 6 (rows=8, cols=5) --
+  row0: ['意图类别', '测试数', '', '正确数', '准确率']
+  row1: ['product_qa', '10', '', '10', '100%']
+  row2: ['after_sales', '10', '', '9', '90%']
+  row3: ['ecommerce', '10', '', '10', '100%']
+  row4: ['repair_track', '10', '', '10', '100%']
+  row5: ['logistics_track', '10', '', '9', '90%']
+  row6: ['other', '10', '', '9', '90%']
+  row7: ['总计', '60', '', '57', '95%']
+-- Table 7 (rows=11, cols=5) --
+  row0: [' 测试问题', '意图分类', 'KG命中', '检索数', '首字延迟(ms)']
+  row1: ['星辰S14处理器是什么', 'product_qa', '是', '5', '480']
+  row2: ['S14多少钱', 'ecommerce', '是', '5', '520']
+  row3: ['手机屏幕碎了怎么办', 'after_sales', '是', '5', '510']
+  row4: ['查询工单WX20260320001', 'repair_track', '否', '5', '450']
+  row5: ['我的快递到哪了', 'logistics_track', '否', '5', '470']
+  row6: ['S14和S14 Pro有什么区别', 'product_qa', '是', '5', '550']
+  row7: ['保修期多长时间', 'after_sales', '是', '5', '490']
+  row8: ['有什么颜色可以选', 'ecommerce', '是', '5', '530']
+  row9: ['怎么设置指纹解锁', 'product_qa', '否', '5', '460']
+  row10: ['退货流程是什么', 'after_sales', '是', '5', '500']
+-- Table 8 (rows=8, cols=3) --
+  row0: ['处理模块', '平均耗时(ms)', '占比']
+  row1: ['意图分类', '< 1', '< 0.1%']
+  row2: ['知识图谱查询', '3', '0.2%']
+  row3: ['FAISS向量检索', '25', '1.4%']
+  row4: ['上下文组装', '2', '0.1%']
+  row5: ['LLM首Token', '480', '26.7%']
+  row6: ['LLM完整生成', '1,290', '71.7%']
+  row7: ['总计', '~1,800', '100%']
+-- Table 9 (rows=6, cols=4) --
+  row0: ['测试用例', '操作', '预期结果', '实际结果']
+  row1: ['上传TXT文件', '上传product_intro.txt', '成功切分并索引', '通过']
+  row2: ['上传PDF文件', '上传产品手册.pdf', '成功解析并索引', '通过']
+  row3: ['上传DOCX文件', '上传售后政策.docx', '成功解析并索引', '通过']
+  row4: ['查看知识库状态', '调用status接口', '返回向量总数', '通过']
+  row5: ['清空知识库', '调用clear接口', '索引文件被删除', '通过']
+-- Table 10 (rows=6, cols=3) --
+  row0: ['查询类型', '测试输入', '返回结果']
+  row1: ['价格查询', '"S14 8+256多少钱"', '官方价3999元，促销价3799元']
+  row2: ['库存查询', '"S14 Pro有货吗"', 'Pro系列实时库存数据']
+  row3: ['规格对比', '"S14和Pro什么区别"', '处理器、屏幕、电池等参数对比表']
+  row4: ['保修查询', '"保修政策是什么"', '整机一年、电池六个月等信息']
+  row5: ['维修费用', '"换屏幕多少钱"', '屏幕更换费用和相关说明']
