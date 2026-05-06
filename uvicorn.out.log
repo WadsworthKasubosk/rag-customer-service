@@ -1,0 +1,21 @@
+INFO:     127.0.0.1:51101 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "GET /api/demo/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "GET /api/feedback/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "GET /api/repair/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "GET /api/logistics/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57650 - "GET /api/db/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60298 - "GET /api/db/products HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60303 - "GET /api/logistics/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62776 - "POST /api/demo/init HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57958 - "POST /api/logistics/create HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53649 - "GET /api/logistics/list HTTP/1.1" 200 OK
+INFO:     127.0.0.1:56485 - "POST /api/demo/init HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61347 - "GET /api/demo/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61348 - "GET /api/feedback/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59287 - "GET / HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59287 - "GET /api/config/current HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49802 - "GET /api/knowledge/status HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59823 - "GET /api/feedback/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60619 - "GET /api/graph/stats HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49802 - "GET /favicon.ico HTTP/1.1" 404 Not Found

@@ -1,0 +1,30 @@
+C:\Users\da983\AppData\Local\Programs\Python\Python312\Lib\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.3.0)/charset_normalizer (2.0.12) doesn't match a supported version!
+  warnings.warn(
+INFO:     Started server process [8640]
+INFO:     Waiting for application startup.
+2026-03-31 21:49:02,739 [WARNING] app.store.cache: Redis delete pattern failed for *: Timeout connecting to server
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+2026-03-31 21:49:21,295 [WARNING] app.store.cache: Redis get failed for feedback:stats: Timeout connecting to server
+2026-03-31 21:49:22,306 [WARNING] app.store.cache: Redis set failed for feedback:stats: Timeout connecting to server
+2026-03-31 21:49:23,333 [WARNING] app.store.cache: Redis get failed for repair:list:all: Timeout connecting to server
+2026-03-31 21:49:24,350 [WARNING] app.store.cache: Redis set failed for repair:list:all: Timeout connecting to server
+2026-03-31 21:49:25,374 [WARNING] app.store.cache: Redis get failed for tracking:list: Timeout connecting to server
+2026-03-31 21:49:26,398 [WARNING] app.store.cache: Redis set failed for tracking:list: Timeout connecting to server
+2026-03-31 21:49:27,421 [WARNING] app.store.cache: Redis get failed for products:: Timeout connecting to server
+2026-03-31 21:49:28,441 [WARNING] app.store.cache: Redis set failed for products:: Timeout connecting to server
+2026-03-31 21:49:41,971 [WARNING] app.store.cache: Redis get failed for products:: Timeout connecting to server
+2026-03-31 21:49:42,981 [WARNING] app.store.cache: Redis set failed for products:: Timeout connecting to server
+2026-03-31 21:49:43,992 [WARNING] app.store.cache: Redis get failed for tracking:list: Timeout connecting to server
+2026-03-31 21:49:45,004 [WARNING] app.store.cache: Redis set failed for tracking:list: Timeout connecting to server
+2026-03-31 21:49:56,454 [WARNING] app.store.cache: Redis delete pattern failed for *: Timeout connecting to server
+2026-03-31 21:50:05,862 [WARNING] app.store.cache: Redis delete pattern failed for tracking:*: Timeout connecting to server
+2026-03-31 21:50:06,873 [WARNING] app.store.cache: Redis set failed for tracking:DD20260331001: Timeout connecting to server
+2026-03-31 21:50:07,888 [WARNING] app.store.cache: Redis set failed for tracking:events:DD20260331001: Timeout connecting to server
+2026-03-31 21:50:16,022 [WARNING] app.store.cache: Redis get failed for tracking:list: Timeout connecting to server
+2026-03-31 21:50:17,034 [WARNING] app.store.cache: Redis set failed for tracking:list: Timeout connecting to server
+2026-03-31 21:50:47,176 [WARNING] app.store.cache: Redis delete pattern failed for *: Timeout connecting to server
+2026-03-31 21:50:56,397 [WARNING] app.store.cache: Redis get failed for feedback:stats: Timeout connecting to server
+2026-03-31 21:50:57,408 [WARNING] app.store.cache: Redis set failed for feedback:stats: Timeout connecting to server
+2026-03-31 21:52:01,253 [WARNING] app.store.cache: Redis get failed for feedback:stats: Timeout connecting to server
+2026-03-31 21:52:02,259 [WARNING] app.store.cache: Redis set failed for feedback:stats: Timeout connecting to server
